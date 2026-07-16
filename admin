@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>豆漿訂貨 Admin</title>
+<style>
+  :root {
+    --bg:#17181a; --card:#1f2123; --border:#34383b; --text:#EDEDEB;
+    --text2:#9a9d9c; --text3:#787c7a; --green:#10b981; --green-d:#059669;
+    --amber:#f59e0b; --red:#f43f5e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,"Noto Sans TC",sans-serif;font-size:14px}
+  .topbar{background:var(--card);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+  .topbar .title{font-weight:700}
+  .tabs{display:flex;gap:4px;background:var(--card);border-bottom:1px solid var(--border);padding:0 8px;overflow-x:auto}
+  .tabs button{background:none;border:none;color:var(--text2);padding:10px 14px;font-size:13px;border-bottom:2px solid transparent;white-space:nowrap}
+  .tabs button.on{color:var(--green);border-bottom-color:var(--green);font-weight:700}
+  .wrap{padding:14px;max-width:900px;margin:0 auto}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{color:var(--text2);text-align:left;font-weight:500;padding:6px 8px;border-bottom:1px solid var(--border)}
+  td{padding:7px 8px;border-bottom:1px solid #2a2d30}
+  tr:last-child td{border-bottom:none}
+  input,select{background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-size:13px}
+  input[type=date]{color-scheme:dark}
+  button.btn{background:var(--green-d);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:600}
+  button.btn2{background:none;color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px}
+  button.danger{background:none;color:var(--red);border:none;font-size:12px}
+  .mono{font-family:monospace}
+  .green{color:var(--green)} .amber{color:var(--amber)} .red{color:var(--red)} .dim{color:var(--text3)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .login{max-width:320px;margin:120px auto;text-align:center}
+  .login input{width:100%;margin:12px 0;padding:10px}
+  .login button{width:100%;padding:10px}
+  .badge{font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid}
+  .b-green{color:var(--green);border-color:var(--green)}
+  .b-red{color:var(--red);border-color:var(--red)}
+  .b-amber{color:var(--amber);border-color:var(--amber)}
+  .oitem{font-size:12px;color:var(--text2);display:flex;justify-content:space-between;padding:2px 0}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ====== 設定 ======
+const API = "https://whwhufkehoxgrrwacqjv.supabase.co/functions/v1/admin-api";
+
+let KEY = sessionStorage.getItem("adminKey") || "";
+let tab = "orders";
+let stores = [], products = [], orders = [], summary = [], customPrices = {};
+let selStore = "", orderDate = tomorrowTW();
+
+const app = document.getElementById("app");
+
+function tomorrowTW(){
+  return new Date(Date.now()+86400000).toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"});
+}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+
+async function api(action, opts={}){
+  const url = new URL(API);
+  url.searchParams.set("action", action);
+  for (const [k,v] of Object.entries(opts.params||{})) url.searchParams.set(k,v);
+  const res = await fetch(url, {
+    method: opts.body ? "POST":"GET",
+    headers: {"x-admin-key":KEY, ...(opts.body?{"Content-Type":"application/json"}:{})},
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const data = await res.json();
+  if (res.status===401){ KEY=""; sessionStorage.removeItem("adminKey"); renderLogin("密碼錯誤"); throw new Error("unauthorized"); }
+  if (!res.ok) throw new Error(data.error||"error");
+  return data;
+}
+
+// ====== 登入 ======
+function renderLogin(msg){
+  app.innerHTML = `
+    <div class="login">
+      <h2>🥛 訂貨系統 Admin</h2>
+      ${msg?`<div class="red" style="margin-top:8px">${esc(msg)}</div>`:""}
+      <input type="password" id="pw" placeholder="管理密碼" />
+      <button class="btn" onclick="doLogin()">登入</button>
+    </div>`;
+  document.getElementById("pw").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin()});
+}
+window.doLogin = async function(){
+  KEY = document.getElementById("pw").value.trim();
+  try {
+    await api("products");
+    sessionStorage.setItem("adminKey", KEY);
+    boot();
+  } catch(e){}
+};
+
+// ====== 主畫面 ======
+async function boot(){
+  render();
+  await loadTab();
+}
+
+function render(){
+  app.innerHTML = `
+    <div class="topbar"><span class="title">🥛 訂貨系統 Admin</span>
+      <button class="btn2" onclick="logout()">登出</button></div>
+    <div class="tabs">
+      ${[["orders","訂單"],["summary","品項統計"],["stores","店家"],["products","商品"],["prices","客製價"]].map(([k,l])=>
+        `<button class="${tab===k?"on":""}" onclick="switchTab('${k}')">${l}</button>`).join("")}
+    </div>
+    <div class="wrap" id="content"><div class="dim">載入中…</div></div>`;
+}
+window.logout = ()=>{ KEY=""; sessionStorage.removeItem("adminKey"); renderLogin(); };
+window.switchTab = (k)=>{ tab=k; render(); loadTab(); };
+
+async function loadTab(){
+  const c = document.getElementById("content");
+  try {
+    if (tab==="orders"){
+      orders = await api("orders",{params:{date:orderDate}});
+      c.innerHTML = `
+        <div class="row">
+          <label class="dim">配送日</label>
+          <input type="date" value="${orderDate}" onchange="chgDate(this.value)" />
+          <button class="btn2" onclick="chgDate('')">全部日期</button>
+          <span class="dim">共 ${orders.length} 筆</span>
+        </div>
+        ${orders.length===0?'<div class="card dim">此日期尚無訂單</div>':""}
+        ${orders.map(o=>`
+          <div class="card" style="${o.status==='cancelled'?'opacity:.45':''}">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <span class="mono green">${esc(o.stores.store_code)}</span>
+                <b> ${esc(o.stores.name)}</b>
+                ${o.source==='on_site'?'<span class="badge b-amber">現場建單</span>':""}
+                ${o.status==='cancelled'?'<span class="badge b-red">已刪除</span>':""}
+                <div class="dim" style="font-size:12px;margin-top:2px">配送 ${o.delivery_date} · 下單 ${o.order_date}</div>
+              </div>
+              ${o.status!=='cancelled'?`<button class="danger" onclick="cancelOrder('${o.id}')">刪除</button>`:""}
+            </div>
+            <div style="margin-top:8px">
+              ${(o.order_items||[]).map(it=>`<div class="oitem"><span>${esc(it.products.name)}</span><span class="mono dim">${it.quantity} × $${it.unit_price}</span></div>`).join("")}
+            </div>
+            <div style="text-align:right;font-weight:700;margin-top:6px">$${Number(o.total_amount).toLocaleString()}</div>
+          </div>`).join("")}`;
+    }
+
+    if (tab==="summary"){
+      summary = await api("summary",{params:{date:orderDate}});
+      c.innerHTML = `
+        <div class="row"><label class="dim">配送日</label>
+          <input type="date" value="${orderDate}" onchange="chgDate(this.value)" /></div>
+        <div class="card">
+          <table><tr><th>品項</th><th style="text-align:right">總數量</th><th style="text-align:right">下單店數</th></tr>
+          ${summary.length===0?'<tr><td colspan="3" class="dim">此日期尚無訂單</td></tr>':""}
+          ${summary.map(s=>`<tr><td>${esc(s.name)}</td><td style="text-align:right" class="mono green"><b>${s.qty}</b> <span class="dim">${esc(s.unit)}</span></td><td style="text-align:right" class="mono dim">${s.storeCount}</td></tr>`).join("")}
+          </table>
+        </div>`;
+    }
+
+    if (tab==="stores"){
+      stores = await api("stores");
+      c.innerHTML = `
+        <div class="card">
+          <b>新增店家</b>
+          <div class="row" style="margin-top:8px">
+            <input id="ns_code" placeholder="店號 如A-001" style="width:110px"/>
+            <input id="ns_name" placeholder="店名" style="width:130px"/>
+            <input id="ns_addr" placeholder="地址" style="width:180px"/>
+            <input id="ns_route" placeholder="路線" style="width:60px"/>
+            <input id="ns_dg" placeholder="梯次 如一四" style="width:90px"/>
+            <button class="btn" onclick="createStore()">新增</button>
+          </div>
+        </div>
+        <div class="card"><table>
+          <tr><th>店號</th><th>店名</th><th>路線/梯次</th><th>LINE綁定</th><th>狀態</th><th></th></tr>
+          ${stores.map(s=>`<tr>
+            <td class="mono green">${esc(s.store_code)}</td>
+            <td>${esc(s.name)}<div class="dim" style="font-size:11px">${esc(s.address||"")}</div></td>
+            <td class="dim">${esc(s.route_code||"-")} · ${esc(s.day_group||"-")}</td>
+            <td>${s.line_group_id?'<span class="green">已綁定</span>':'<span class="dim">未綁定</span>'}</td>
+            <td>${s.status==='active'?'<span class="badge b-green">使用中</span>':'<span class="badge b-red">停用</span>'}</td>
+            <td><button class="btn2" onclick="toggleStore('${s.id}','${s.status}')">${s.status==='active'?'停用':'啟用'}</button></td>
+          </tr>`).join("")}
+        </table></div>`;
+    }
+
+    if (tab==="products"){
+      products = await api("products");
+      c.innerHTML = `
+        <div class="card">
+          <b>新增商品</b>
+          <div class="row" style="margin-top:8px">
+            <input id="np_name" placeholder="商品名稱" style="width:150px"/>
+            <input id="np_unit" placeholder="單位" style="width:90px"/>
+            <input id="np_price" placeholder="基礎價" type="number" style="width:90px"/>
+            <button class="btn" onclick="createProduct()">新增</button>
+          </div>
+        </div>
+        <div class="card"><table>
+          <tr><th>商品</th><th>單位</th><th style="text-align:right">基礎價</th><th>狀態</th><th></th></tr>
+          ${products.map(p=>`<tr>
+            <td>${esc(p.name)}</td><td class="dim">${esc(p.unit)}</td>
+            <td style="text-align:right"><input type="number" value="${p.base_price}" style="width:80px;text-align:right" onchange="updPrice('${p.id}',this.value)"/></td>
+            <td>${p.is_active?'<span class="badge b-green">上架</span>':'<span class="badge b-red">下架</span>'}</td>
+            <td><button class="btn2" onclick="toggleProduct('${p.id}',${p.is_active})">${p.is_active?'下架':'上架'}</button></td>
+          </tr>`).join("")}
+        </table></div>`;
+    }
+
+    if (tab==="prices"){
+      stores = await api("stores");
+      products = await api("products");
+      if (!selStore && stores.length) selStore = stores[0].id;
+      const cp = selStore ? await api("custom_prices",{params:{storeId:selStore}}) : [];
+      customPrices = Object.fromEntries(cp.map(c=>[c.product_id, c.custom_price]));
+      c.innerHTML = `
+        <div class="row">
+          <label class="dim">選擇店家</label>
+          <select onchange="chgStore(this.value)">
+            ${stores.map(s=>`<option value="${s.id}" ${s.id===selStore?"selected":""}>[${esc(s.store_code)}] ${esc(s.name)}</option>`).join("")}
+          </select>
+        </div>
+        <div class="card"><table>
+          <tr><th>商品</th><th style="text-align:right">基礎價</th><th style="text-align:right">此店價格(留空=用基礎價)</th><th></th></tr>
+          ${products.filter(p=>p.is_active).map(p=>{
+            const has = customPrices[p.id]!=null;
+            return `<tr>
+              <td>${esc(p.name)}</td>
+              <td style="text-align:right" class="dim mono">$${p.base_price}</td>
+              <td style="text-align:right"><input type="number" id="cp_${p.id}" value="${has?customPrices[p.id]:""}" placeholder="${p.base_price}" style="width:90px;text-align:right;${has?'border-color:var(--amber);color:var(--amber)':''}"/></td>
+              <td><button class="btn2" onclick="saveCP('${p.id}')">儲存</button></td>
+            </tr>`}).join("")}
+        </table></div>`;
+    }
+  } catch(e){
+    if (String(e.message)!=="unauthorized") c.innerHTML = `<div class="card red">載入失敗:${esc(e.message)}</div>`;
+  }
+}
+
+// ====== 操作 ======
+window.chgDate = (v)=>{ orderDate=v; loadTab(); };
+window.chgStore = (v)=>{ selStore=v; loadTab(); };
+
+window.createStore = async ()=>{
+  const g = id=>document.getElementById(id).value.trim();
+  try{
+    await api("create_store",{body:{store_code:g("ns_code"),name:g("ns_name"),address:g("ns_addr"),route_code:g("ns_route"),day_group:g("ns_dg")}});
+    loadTab();
+  }catch(e){alert(e.message)}
+};
+window.toggleStore = async (id,status)=>{
+  await api("update_store",{body:{id,status:status==='active'?'suspended':'active'}}); loadTab();
+};
+window.createProduct = async ()=>{
+  const g = id=>document.getElementById(id).value.trim();
+  try{
+    await api("create_product",{body:{name:g("np_name"),unit:g("np_unit"),base_price:g("np_price")}});
+    loadTab();
+  }catch(e){alert(e.message)}
+};
+window.updPrice = async (id,v)=>{ await api("update_product",{body:{id,base_price:v}}); };
+window.toggleProduct = async (id,active)=>{
+  await api("update_product",{body:{id,is_active:!active}}); loadTab();
+};
+window.saveCP = async (pid)=>{
+  const v = document.getElementById("cp_"+pid).value.trim();
+  await api("set_custom_price",{body:{storeId:selStore,productId:pid,price:v}});
+  loadTab();
+};
+window.cancelOrder = async (id)=>{
+  const reason = prompt("刪除原因(將記錄於異動log):");
+  if (reason===null) return;
+  await api("cancel_order",{body:{orderId:id,reason}}); loadTab();
+};
+
+// ====== 啟動 ======
+if (KEY) boot(); else renderLogin();
+</script>
+</body>
+</html>
