@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>豆漿訂貨</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  :root {
+    --bg: #17181a;
+    --card: #1f2123;
+    --border: #34383b;
+    --text: #EDEDEB;
+    --text2: #9a9d9c;
+    --text3: #787c7a;
+    --green: #10b981;
+    --green-dark: #059669;
+    --amber: #f59e0b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Noto Sans TC", sans-serif;
+    min-height: 100vh;
+    padding-bottom: 90px;
+  }
+  .header {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 16px;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .header .code { color: var(--green); font-family: monospace; font-size: 12px; font-weight: 700; }
+  .header .name { font-size: 16px; font-weight: 700; margin-top: 2px; }
+  .section { padding: 12px 16px; }
+  .date-row {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 14px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .date-row label { font-size: 13px; color: var(--text2); }
+  .date-row input {
+    background: var(--bg); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 10px; font-size: 14px;
+  }
+  .product {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 14px; margin-bottom: 8px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .product .pname { font-size: 14px; font-weight: 500; }
+  .product .pinfo { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .product .pinfo .custom { color: var(--amber); }
+  .qty { display: flex; align-items: center; gap: 10px; }
+  .qty button {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text);
+    font-size: 18px; line-height: 1;
+  }
+  .qty button.plus { background: var(--green-dark); border-color: var(--green-dark); color: #fff; }
+  .qty .num { min-width: 24px; text-align: center; font-family: monospace; font-size: 15px; }
+  .footer {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--card); border-top: 1px solid var(--border); padding: 12px 16px;
+  }
+  .submit {
+    width: 100%; padding: 14px; border-radius: 12px; border: none;
+    background: var(--green-dark); color: #fff; font-size: 15px; font-weight: 700;
+  }
+  .submit:disabled { background: #2a2d30; color: #54585a; }
+  .center { text-align: center; padding: 60px 20px; color: var(--text2); font-size: 14px; }
+  .success {
+    text-align: center; padding: 60px 24px;
+  }
+  .success .icon { font-size: 48px; margin-bottom: 12px; }
+  .success .title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+  .success .detail { font-size: 13px; color: var(--text2); line-height: 1.7; }
+</style>
+</head>
+<body>
+<div id="app"><div class="center">載入中…</div></div>
+
+<script>
+// ====== 設定 ======
+const LIFF_ID = "2010732511-OcnAZuRv";
+const API_URL = "https://whwhufkehoxgrrwacqjv.supabase.co/functions/v1/liff-api";
+
+// ====== 狀態 ======
+let store = null;
+let products = [];
+let cart = {};        // productId -> qty
+let deliveryDate = "";
+let groupId = "";
+
+const app = document.getElementById("app");
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+
+function cartTotal() {
+  let t = 0;
+  for (const p of products) {
+    const q = cart[p.id] || 0;
+    t += q * p.price;
+  }
+  return t;
+}
+function cartCount() {
+  return Object.values(cart).filter(q => q > 0).length;
+}
+
+function render() {
+  const total = cartTotal();
+  app.innerHTML = `
+    <div class="header">
+      <div class="code">[${esc(store.code)}]</div>
+      <div class="name">${esc(store.name)}</div>
+    </div>
+    <div class="section">
+      <div class="date-row">
+        <label>配送日期(預設次日)</label>
+        <input type="date" id="ddate" value="${deliveryDate}" />
+      </div>
+    </div>
+    <div class="section" style="padding-top:0">
+      ${products.map(p => `
+        <div class="product">
+          <div>
+            <div class="pname">${esc(p.name)}</div>
+            <div class="pinfo">${esc(p.unit)} · $${p.price}${p.isCustom ? ' <span class="custom">(專屬價)</span>' : ""}</div>
+          </div>
+          <div class="qty">
+            <button onclick="chg('${p.id}',-1)">−</button>
+            <span class="num">${cart[p.id] || 0}</span>
+            <button class="plus" onclick="chg('${p.id}',1)">＋</button>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+    <div class="footer">
+      <button class="submit" id="submitBtn" ${cartCount() === 0 ? "disabled" : ""} onclick="submitOrder()">
+        ${cartCount() === 0 ? "請選擇品項" : `送出訂單 · $${total}`}
+      </button>
+    </div>
+  `;
+  document.getElementById("ddate").addEventListener("change", (e) => {
+    deliveryDate = e.target.value;
+  });
+}
+
+window.chg = function (pid, d) {
+  cart[pid] = Math.max(0, (cart[pid] || 0) + d);
+  render();
+};
+
+window.submitOrder = async function () {
+  const btn = document.getElementById("submitBtn");
+  btn.disabled = true;
+  btn.textContent = "送出中…";
+
+  const items = Object.entries(cart)
+    .filter(([, q]) => q > 0)
+    .map(([productId, quantity]) => ({ productId, quantity }));
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ groupId, deliveryDate, items }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || "下單失敗");
+
+    const [, mm, dd] = deliveryDate.split("-");
+    app.innerHTML = `
+      <div class="success">
+        <div class="icon">✅</div>
+        <div class="title">訂單已送出</div>
+        <div class="detail">
+          配送日 ${mm}/${dd}<br/>
+          合計 $${data.total}<br/><br/>
+          群組將收到確認訊息,可直接關閉此頁面
+        </div>
+      </div>
+    `;
+    // 3秒後自動關閉LIFF視窗
+    setTimeout(() => { if (liff.isInClient()) liff.closeWindow(); }, 3000);
+  } catch (e) {
+    alert("下單失敗:" + e.message);
+    btn.disabled = false;
+    btn.textContent = "送出訂單";
+  }
+};
+
+// ====== 啟動 ======
+(async function main() {
+  try {
+    await liff.init({ liffId: LIFF_ID });
+
+    // 取得groupId:優先從liff.state/網址參數拿
+    const params = new URLSearchParams(location.search);
+    groupId = params.get("groupId") || "";
+    if (!groupId && params.get("liff.state")) {
+      const stateParams = new URLSearchParams(params.get("liff.state").replace(/^\?/, ""));
+      groupId = stateParams.get("groupId") || "";
+    }
+    if (!groupId) {
+      app.innerHTML = '<div class="center">無法取得群組資訊,請從群組內的「叫貨」按鈕開啟</div>';
+      return;
+    }
+
+    const res = await fetch(`${API_URL}?groupId=${encodeURIComponent(groupId)}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "載入失敗");
+
+    store = data.store;
+    products = data.products;
+    deliveryDate = data.defaultDeliveryDate;
+    render();
+  } catch (e) {
+    app.innerHTML = `<div class="center">載入失敗:${esc(e.message)}</div>`;
+  }
+})();
+</script>
+</body>
+</html>
