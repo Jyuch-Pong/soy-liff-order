@@ -1,256 +1,265 @@
-// supabase/functions/driver-api/index.ts
-//
-// 司機端 API:
-//   POST ?action=login                      → 驗證帳號密碼,回傳司機資訊
-//   GET  ?action=today&date=YYYY-MM-DD      → 當日配送清單(綠/紅)+品項總計
-//   POST ?action=create_onsite              → 現場快速建單(當日配送)
-//   POST ?action=addon                      → 現場追加(合併進既有訂單)
-//   POST ?action=mark_delivered             → 送達回報
-//
-// 驗證方式:每個請求帶 x-driver-account / x-driver-password header,
-//          伺服器端以 SHA-256 比對 drivers.password_hash
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>司機配送</title>
+<style>
+  :root {
+    --bg:#17181a; --card:#1f2123; --border:#34383b; --text:#EDEDEB;
+    --text2:#9a9d9c; --text3:#787c7a; --green:#10b981; --green-d:#059669;
+    --amber:#f59e0b; --red:#f43f5e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,"Noto Sans TC",sans-serif;font-size:14px;padding-bottom:20px}
+  .topbar{background:var(--green-d);color:#fff;padding:12px 16px;position:sticky;top:0;z-index:10}
+  .topbar .name{font-weight:700;font-size:15px}
+  .topbar .sub{font-size:12px;opacity:.85;margin-top:2px}
+  .bar2{background:var(--card);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+  input,select{background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:14px}
+  input[type=date]{color-scheme:dark}
+  .wrap{padding:12px;max-width:560px;margin:0 auto}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px}
+  .scard{border-radius:12px;border:2px solid;padding:12px;margin-bottom:10px}
+  .s-green{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.45)}
+  .s-red{background:rgba(244,63,94,.08);border-color:rgba(244,63,94,.45)}
+  .s-done{background:rgba(16,185,129,.04);border-color:rgba(16,185,129,.2);opacity:.75}
+  .mono{font-family:monospace}
+  .green{color:var(--green)} .amber{color:var(--amber)} .red{color:var(--red)} .dim{color:var(--text3)}
+  .badge{font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid;white-space:nowrap}
+  .b-green{color:var(--green);border-color:var(--green)}
+  .b-red{color:var(--red);border-color:var(--red)}
+  .b-amber{color:var(--amber);border-color:var(--amber)}
+  .b-blue{color:#60a5fa;border-color:#60a5fa}
+  button.btn{background:var(--green-d);color:#fff;border:none;border-radius:10px;padding:9px 14px;font-size:13px;font-weight:600}
+  button.btn-red{background:var(--red);color:#fff;border:none;border-radius:10px;padding:9px 14px;font-size:13px;font-weight:600}
+  button.btn2{background:none;color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px}
+  .full{width:100%}
+  .login{max-width:300px;margin:110px auto;text-align:center}
+  .login input{width:100%;margin:8px 0;padding:11px}
+  .login button{width:100%;padding:11px;margin-top:8px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{color:var(--text2);text-align:left;font-weight:500;padding:5px 6px;border-bottom:1px solid var(--border)}
+  td{padding:6px;border-bottom:1px solid #2a2d30}
+  tr:last-child td{border-bottom:none}
+  .oitem{font-size:12px;color:var(--text2);display:flex;justify-content:space-between;padding:2px 0}
+  .qtyrow{display:flex;justify-content:space-between;align-items:center;padding:5px 0}
+  .qtyrow .ctrl{display:flex;align-items:center;gap:10px}
+  .qtyrow button{width:30px;height:30px;border-radius:50%;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:16px}
+  .qtyrow button.p{background:var(--green-d);border-color:var(--green-d);color:#fff}
+  .qtyrow .n{min-width:22px;text-align:center;font-family:monospace}
+  details summary{cursor:pointer;padding:4px 0}
+  .addr{font-size:12px;color:var(--text2);margin-top:2px}
+  .rowbtns{display:flex;gap:8px;margin-top:10px}
+  .rowbtns button{flex:1}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ====== 設定 ======
+const API = "https://whwhufkehoxgrrwacqjv.supabase.co/functions/v1/driver-api";
 
-import { createClient } from "npm:@supabase/supabase-js@2";
-import { createHash } from "node:crypto";
+let CRED = JSON.parse(sessionStorage.getItem("driverCred")||"null"); // {account,password,name,car_no}
+let viewDate = todayTW();
+let data = null;        // today回傳的資料
+let builder = null;     // {storeId, mode:'new'|'addon', orderId?, cart:{}}
 
-const supabase = createClient(
-  Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-);
+const app = document.getElementById("app");
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, x-driver-account, x-driver-password",
+function todayTW(){ return new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"}); }
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function weekdayTW(dateStr){
+  return new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",weekday:"short"}).format(new Date(dateStr+"T12:00:00+08:00"));
+}
+
+async function api(action, opts={}){
+  const url = new URL(API);
+  url.searchParams.set("action", action);
+  for (const [k,v] of Object.entries(opts.params||{})) url.searchParams.set(k,v);
+  const res = await fetch(url, {
+    method: opts.body||action==="login" ? "POST":"GET",
+    headers: {
+      "x-driver-account": CRED?.account||"",
+      "x-driver-password": CRED?.password||"",
+      ...(opts.body?{"Content-Type":"application/json"}:{}),
+    },
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const d = await res.json();
+  if (res.status===401 && action!=="login"){ logout(); throw new Error("unauthorized"); }
+  if (!res.ok) throw new Error(d.error||"error");
+  return d;
+}
+
+// ====== 登入 ======
+function renderLogin(msg){
+  app.innerHTML = `
+    <div class="login">
+      <h2>🚚 司機配送系統</h2>
+      ${msg?`<div class="red" style="margin-top:8px">${esc(msg)}</div>`:""}
+      <input id="acc" placeholder="帳號" autocomplete="username" />
+      <input id="pw" type="password" placeholder="密碼" autocomplete="current-password" />
+      <button class="btn" onclick="doLogin()">登入</button>
+    </div>`;
+  document.getElementById("pw").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin()});
+}
+window.doLogin = async function(){
+  const account = document.getElementById("acc").value.trim();
+  const password = document.getElementById("pw").value;
+  CRED = { account, password };
+  try {
+    const r = await api("login",{body:{}});
+    CRED.name = r.driver.name; CRED.car_no = r.driver.car_no;
+    sessionStorage.setItem("driverCred", JSON.stringify(CRED));
+    load();
+  } catch(e){ CRED=null; renderLogin(e.message==="unauthorized"?"帳號或密碼錯誤":e.message); }
+};
+function logout(){ CRED=null; sessionStorage.removeItem("driverCred"); renderLogin(); }
+window.logout = logout;
+
+// ====== 主畫面 ======
+async function load(){
+  app.innerHTML = `<div class="wrap dim">載入中…</div>`;
+  try {
+    data = await api("today",{params:{date:viewDate}});
+    render();
+  } catch(e){
+    if (String(e.message)!=="unauthorized")
+      app.innerHTML = `<div class="wrap red">載入失敗:${esc(e.message)}</div>`;
+  }
+}
+
+function render(){
+  const done = data.stores.filter(s=>s.order).length;
+  app.innerHTML = `
+    <div class="topbar">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div class="name">🚚 ${esc(CRED.name)} <span style="font-weight:400;font-size:12px;opacity:.85">${esc(CRED.car_no||"")}</span></div>
+          <div class="sub">${viewDate}(${weekdayTW(viewDate)}) · 路線 ${data.routes.join("、")||"無"} · 梯次 ${esc(data.dayGroup||"-")}</div>
+        </div>
+        <button class="btn2" style="color:#fff;border-color:rgba(255,255,255,.4)" onclick="logout()">登出</button>
+      </div>
+    </div>
+    <div class="bar2">
+      <input type="date" value="${viewDate}" onchange="chgDate(this.value)" />
+      <span class="green" style="font-weight:700">${done}/${data.stores.length} 已下單</span>
+    </div>
+    <div class="wrap">
+      ${renderTotals()}
+      ${data.stores.length===0?'<div class="card dim">此日期無配送店家</div>':""}
+      ${data.stores.map(renderStore).join("")}
+    </div>`;
+}
+
+function renderTotals(){
+  if (!data.totals.length) return "";
+  return `
+    <div class="card">
+      <details open>
+        <summary><b>📦 當日品項總計</b></summary>
+        <table style="margin-top:6px">
+          <tr><th>品項</th><th style="text-align:right">總數量</th><th style="text-align:right">下單店數</th></tr>
+          ${data.totals.map(t=>`<tr>
+            <td>${esc(t.name)}</td>
+            <td style="text-align:right" class="mono green"><b>${t.qty}</b> <span class="dim">${esc(t.unit)}</span></td>
+            <td style="text-align:right" class="mono dim">${t.storeCount}</td>
+          </tr>`).join("")}
+        </table>
+      </details>
+    </div>`;
+}
+
+function renderStore(s){
+  const ordered = !!s.order;
+  const delivered = ordered && s.order.status==="delivered";
+  const cls = delivered ? "s-done" : ordered ? "s-green" : "s-red";
+  const isBuilding = builder && builder.storeId===s.id;
+  return `
+    <div class="scard ${cls}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div>
+          <span class="mono dim" style="font-size:11px;font-weight:700">${esc(s.store_code)}</span>
+          <b style="margin-left:4px">${esc(s.name)}</b>
+          <div class="addr">📍 ${esc(s.address||"")}</div>
+        </div>
+        ${delivered?'<span class="badge b-blue">✓ 已送達</span>'
+          :ordered?'<span class="badge b-green">已訂貨</span>'
+          :'<span class="badge b-red">未訂貨</span>'}
+      </div>
+
+      ${ordered ? `
+        <details style="margin-top:8px">
+          <summary style="display:flex;justify-content:space-between">
+            <span class="dim" style="font-size:12px">訂貨明細 ${s.order.source==='on_site'?'<span class="badge b-amber">現場建單</span>':""}</span>
+            <b>$${s.order.total.toLocaleString()}</b>
+          </summary>
+          <div style="margin-top:6px">
+            ${s.order.items.map(it=>`<div class="oitem"><span>${esc(it.name)}</span><span class="mono">${it.qty} × $${it.price}</span></div>`).join("")}
+          </div>
+        </details>
+        ${!isBuilding ? `
+          <div class="rowbtns">
+            ${!delivered?`<button class="btn2" onclick="openBuilder('${s.id}','addon','${s.order.id}')">＋ 現場追加</button>`:""}
+            ${!delivered?`<button class="btn" onclick="markDelivered('${s.order.id}')">✓ 送達</button>`:""}
+          </div>`:""}
+      ` : `
+        ${!isBuilding?`<button class="btn-red full" style="margin-top:10px" onclick="openBuilder('${s.id}','new')">現場快速建單</button>`:""}
+      `}
+
+      ${isBuilding ? renderBuilder(s) : ""}
+    </div>`;
+}
+
+function renderBuilder(s){
+  return `
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+      <b style="font-size:13px">${builder.mode==='addon'?'追加品項':'建立訂單'}</b>
+      ${data.products.map(p=>{
+        const q = builder.cart[p.id]||0;
+        return `<div class="qtyrow">
+          <span style="font-size:13px">${esc(p.name)} <span class="dim" style="font-size:11px">${esc(p.unit)}</span></span>
+          <div class="ctrl">
+            <button onclick="chgQty('${p.id}',-1)">−</button>
+            <span class="n">${q}</span>
+            <button class="p" onclick="chgQty('${p.id}',1)">＋</button>
+          </div>
+        </div>`}).join("")}
+      <div class="rowbtns">
+        <button class="btn2" onclick="closeBuilder()">取消</button>
+        <button class="btn" onclick="submitBuilder()">${builder.mode==='addon'?'確認追加':'建立訂單'}</button>
+      </div>
+    </div>`;
+}
+
+// ====== 操作 ======
+window.chgDate = (v)=>{ viewDate=v; builder=null; load(); };
+window.openBuilder = (storeId,mode,orderId)=>{ builder={storeId,mode,orderId,cart:{}}; render(); };
+window.closeBuilder = ()=>{ builder=null; render(); };
+window.chgQty = (pid,d)=>{ builder.cart[pid]=Math.max(0,(builder.cart[pid]||0)+d); render(); };
+
+window.submitBuilder = async ()=>{
+  const items = Object.entries(builder.cart).filter(([,q])=>q>0).map(([productId,qty])=>({productId,qty}));
+  if (!items.length) return alert("請選擇品項");
+  try {
+    if (builder.mode==="new"){
+      await api("create_onsite",{body:{storeId:builder.storeId,date:viewDate,items}});
+    } else {
+      await api("addon",{body:{orderId:builder.orderId,storeId:builder.storeId,items}});
+    }
+    builder=null;
+    load();
+  } catch(e){ alert(e.message); }
 };
 
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...cors, "Content-Type": "application/json" },
-  });
-}
+window.markDelivered = async (orderId)=>{
+  if (!confirm("確認此店已送達?")) return;
+  try { await api("mark_delivered",{body:{orderId}}); load(); } catch(e){ alert(e.message); }
+};
 
-function hashPassword(pw: string): string {
-  return createHash("sha256").update(pw).digest("hex");
-}
-
-// 台灣時區的 YYYY-MM-DD
-function taipeiDateStr(offsetDays = 0): string {
-  const now = new Date(Date.now() + offsetDays * 86400000);
-  return now.toLocaleDateString("en-CA", { timeZone: "Asia/Taipei" });
-}
-
-// 日期 → day_group(一四/二五/三六),週日回傳 null
-function dayGroupOf(dateStr: string): string | null {
-  const wd = new Date(dateStr + "T00:00:00+08:00").getUTCDay(); // 用+08:00確保取到台灣的星期幾
-  // getUTCDay對+08:00午夜:直接用Date物件的getDay在UTC環境會偏移,改用可靠算法:
-  const d = new Date(dateStr + "T12:00:00+08:00");
-  const weekday = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Taipei", weekday: "short" }).format(d);
-  const map: Record<string, string | null> = {
-    Mon: "一四", Thu: "一四",
-    Tue: "二五", Fri: "二五",
-    Wed: "三六", Sat: "三六",
-    Sun: null,
-  };
-  return map[weekday] ?? null;
-}
-
-// 驗證司機身份,成功回傳司機資料,失敗回傳null
-async function authDriver(req: Request) {
-  const account = req.headers.get("x-driver-account") ?? "";
-  const password = req.headers.get("x-driver-password") ?? "";
-  if (!account || !password) return null;
-  const { data: driver } = await supabase.from("drivers")
-    .select("id, name, car_no, account, password_hash, status")
-    .eq("account", account).eq("status", "active").maybeSingle();
-  if (!driver) return null;
-  if (driver.password_hash !== hashPassword(password)) return null;
-  return driver;
-}
-
-// 取得某店某日的價格表(客製價優先)
-async function getPriceMap(storeId: string) {
-  const { data: products } = await supabase.from("products")
-    .select("id, name, unit, base_price").eq("is_active", true);
-  const { data: custom } = await supabase.from("store_product_prices")
-    .select("product_id, custom_price").eq("store_id", storeId);
-  const customMap = new Map((custom ?? []).map((c) => [c.product_id, Number(c.custom_price)]));
-  const map = new Map<string, { name: string; unit: string; price: number }>();
-  for (const p of products ?? []) {
-    map.set(p.id, {
-      name: p.name, unit: p.unit,
-      price: customMap.has(p.id) ? customMap.get(p.id)! : Number(p.base_price),
-    });
-  }
-  return map;
-}
-
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-
-  const url = new URL(req.url);
-  const action = url.searchParams.get("action") ?? "";
-
-  try {
-    // ---- 登入 ----
-    if (req.method === "POST" && action === "login") {
-      const driver = await authDriver(req);
-      if (!driver) return json({ error: "帳號或密碼錯誤" }, 401);
-      return json({ ok: true, driver: { id: driver.id, name: driver.name, car_no: driver.car_no } });
-    }
-
-    // 以下所有 action 都需要驗證
-    const driver = await authDriver(req);
-    if (!driver) return json({ error: "請重新登入" }, 401);
-
-    // ---- 當日清單 ----
-    if (req.method === "GET" && action === "today") {
-      const date = url.searchParams.get("date") || taipeiDateStr(0);
-      const dg = dayGroupOf(date);
-
-      // 司機負責的路線
-      const { data: myRoutes } = await supabase.from("driver_routes")
-        .select("route_code, day_group").eq("driver_id", driver.id);
-
-      // 今天生效的路線:day_group=null(全包) 或 day_group=今天的梯次
-      const activeRouteCodes = (myRoutes ?? [])
-        .filter((r) => r.day_group === null || r.day_group === dg)
-        .map((r) => r.route_code);
-
-      if (!dg || activeRouteCodes.length === 0) {
-        return json({ date, dayGroup: dg, routes: activeRouteCodes, stores: [], totals: [] });
-      }
-
-      // 該路線+梯次的店家
-      const { data: stores } = await supabase.from("stores")
-        .select("id, store_code, name, address, phone")
-        .in("route_code", activeRouteCodes)
-        .eq("day_group", dg)
-        .eq("status", "active")
-        .order("store_code");
-
-      const storeIds = (stores ?? []).map((s) => s.id);
-
-      // 該日訂單
-      const { data: orders } = storeIds.length
-        ? await supabase.from("orders")
-            .select("id, store_id, status, source, total_amount, order_items(product_id, quantity, unit_price, products(name, unit))")
-            .in("store_id", storeIds)
-            .eq("delivery_date", date)
-            .neq("status", "cancelled")
-        : { data: [] };
-
-      const orderByStore = new Map((orders ?? []).map((o) => [o.store_id, o]));
-
-      // 品項總計
-      const totals: Record<string, { name: string; unit: string; qty: number; storeCount: number }> = {};
-      for (const o of orders ?? []) {
-        for (const it of (o as any).order_items ?? []) {
-          const pid = it.product_id;
-          if (!totals[pid]) totals[pid] = { name: it.products.name, unit: it.products.unit, qty: 0, storeCount: 0 };
-          totals[pid].qty += Number(it.quantity);
-          totals[pid].storeCount += 1;
-        }
-      }
-
-      const list = (stores ?? []).map((s) => {
-        const o = orderByStore.get(s.id) as any;
-        return {
-          id: s.id, store_code: s.store_code, name: s.name, address: s.address,
-          order: o ? {
-            id: o.id, status: o.status, source: o.source, total: Number(o.total_amount),
-            items: (o.order_items ?? []).map((it: any) => ({
-              productId: it.product_id, name: it.products.name,
-              qty: Number(it.quantity), price: Number(it.unit_price),
-            })),
-          } : null,
-        };
-      });
-
-      // 商品清單(給現場建單/追加選品用,不含價格——價格依店家於送出時後端計算)
-      const { data: products } = await supabase.from("products")
-        .select("id, name, unit").eq("is_active", true).order("name");
-
-      return json({ date, dayGroup: dg, routes: activeRouteCodes, stores: list, totals: Object.values(totals), products: products ?? [] });
-    }
-
-    // ---- 現場快速建單 ----
-    if (req.method === "POST" && action === "create_onsite") {
-      const { storeId, date, items } = await req.json();
-      if (!storeId || !date || !Array.isArray(items) || items.length === 0) {
-        return json({ error: "參數不完整" }, 400);
-      }
-      const priceMap = await getPriceMap(storeId);
-      const rows = items
-        .filter((it: any) => priceMap.has(it.productId) && Number(it.qty) > 0)
-        .map((it: any) => ({
-          product_id: it.productId, quantity: Number(it.qty),
-          unit_price: priceMap.get(it.productId)!.price,
-        }));
-      if (rows.length === 0) return json({ error: "沒有有效品項" }, 400);
-      const total = rows.reduce((s, r) => s + r.quantity * r.unit_price, 0);
-
-      const { data: order, error } = await supabase.from("orders").insert({
-        store_id: storeId, order_date: taipeiDateStr(0), delivery_date: date,
-        status: "confirmed", source: "on_site", total_amount: total,
-        created_by: driver.name,
-      }).select("id").single();
-      if (error) return json({ error: error.message }, 500);
-
-      await supabase.from("order_items").insert(rows.map((r) => ({ ...r, order_id: order.id })));
-      return json({ ok: true });
-    }
-
-    // ---- 現場追加 ----
-    if (req.method === "POST" && action === "addon") {
-      const { orderId, storeId, items } = await req.json();
-      if (!orderId || !storeId || !Array.isArray(items) || items.length === 0) {
-        return json({ error: "參數不完整" }, 400);
-      }
-      const priceMap = await getPriceMap(storeId);
-      const { data: existing } = await supabase.from("order_items")
-        .select("id, product_id, quantity").eq("order_id", orderId);
-      const existMap = new Map((existing ?? []).map((e) => [e.product_id, e]));
-
-      let addedTotal = 0;
-      for (const it of items) {
-        const qty = Number(it.qty);
-        if (!priceMap.has(it.productId) || qty <= 0) continue;
-        const price = priceMap.get(it.productId)!.price;
-        addedTotal += qty * price;
-        const ex = existMap.get(it.productId);
-        if (ex) {
-          await supabase.from("order_items")
-            .update({ quantity: Number(ex.quantity) + qty }).eq("id", ex.id);
-        } else {
-          await supabase.from("order_items").insert({
-            order_id: orderId, product_id: it.productId, quantity: qty, unit_price: price,
-          });
-        }
-      }
-      if (addedTotal === 0) return json({ error: "沒有有效品項" }, 400);
-
-      // 更新訂單總額
-      const { data: order } = await supabase.from("orders")
-        .select("total_amount").eq("id", orderId).single();
-      await supabase.from("orders")
-        .update({ total_amount: Number(order!.total_amount) + addedTotal }).eq("id", orderId);
-
-      return json({ ok: true });
-    }
-
-    // ---- 送達回報 ----
-    if (req.method === "POST" && action === "mark_delivered") {
-      const { orderId } = await req.json();
-      const { error } = await supabase.from("orders")
-        .update({ status: "delivered" }).eq("id", orderId);
-      if (error) return json({ error: error.message }, 500);
-      return json({ ok: true });
-    }
-
-    return json({ error: "unknown action" }, 400);
-  } catch (e) {
-    return json({ error: String(e) }, 500);
-  }
-});
+// ====== 啟動 ======
+if (CRED) load(); else renderLogin();
+</script>
+</body>
+</html>
