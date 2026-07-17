@@ -19,6 +19,8 @@
   .tabs button.on{color:var(--green);border-bottom-color:var(--green);font-weight:700}
   .wrap{padding:14px;max-width:900px;margin:0 auto}
   .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+  .card{overflow-x:auto}
+  .card table{min-width:100%}
   table{width:100%;border-collapse:collapse;font-size:13px}
   th{color:var(--text2);text-align:left;font-weight:500;padding:6px 8px;border-bottom:1px solid var(--border)}
   td{padding:7px 8px;border-bottom:1px solid #2a2d30}
@@ -105,7 +107,7 @@ async function boot(){ render(); await loadTab(); }
 
 function render(){
   app.innerHTML = `
-    <div class="topbar"><span class="title">🥛 訂貨系統 Admin <span class="dim" style="font-size:11px">v3</span></span>
+    <div class="topbar"><span class="title">🥛 訂貨系統 Admin <span class="dim" style="font-size:11px">v4</span></span>
       <button class="btn2" onclick="logout()">登出</button></div>
     <div class="tabs">
       ${[["orders","訂單"],["summary","品項統計"],["stores","店家"],["products","商品"],["prices","客製價"],["drivers","司機"],["routes","路線"]].map(([k,l])=>
@@ -208,23 +210,25 @@ async function loadTab(){
             <button class="btn" onclick="createProduct()">新增</button>
           </div>
         </div>
-        <div class="card"><table>
-          <tr><th style="width:60px">排序</th><th>商品</th><th>單位</th><th style="text-align:right">基礎價</th><th>狀態</th><th style="text-align:right"></th></tr>
-          ${products.map((p,i)=>`<tr>
-            <td style="white-space:nowrap">
-              <button class="btn2" style="padding:3px 7px" ${i===0?"disabled":""} onclick="moveProduct(${i},-1)">↑</button>
-              <button class="btn2" style="padding:3px 7px" ${i===products.length-1?"disabled":""} onclick="moveProduct(${i},1)">↓</button>
-            </td>
-            <td><input value="${esc(p.name)}" style="width:130px" onchange="updProductField('${p.id}','name',this.value)"/></td>
-            <td><input value="${esc(p.unit)}" style="width:80px" onchange="updProductField('${p.id}','unit',this.value)"/></td>
-            <td style="text-align:right"><input type="number" value="${p.base_price}" style="width:80px;text-align:right" onchange="updPrice('${p.id}',this.value)"/></td>
-            <td>${p.is_active?'<span class="badge b-green">上架</span>':'<span class="badge b-red">下架</span>'}</td>
-            <td style="text-align:right;white-space:nowrap">
-              <button class="btn2" onclick="toggleProduct('${p.id}',${p.is_active})">${p.is_active?'下架':'上架'}</button>
-              <button class="danger" onclick="deleteProduct('${p.id}','${esc(p.name)}')">刪除</button>
-            </td>
-          </tr>`).join("")}
-        </table></div>
+        ${products.map((p,i)=>`
+          <div class="card" style="padding:10px 12px">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="display:inline-flex;gap:4px">
+                <button class="btn2" style="padding:4px 9px" ${i===0?"disabled":""} onclick="moveProduct(${i},-1)">↑</button>
+                <button class="btn2" style="padding:4px 9px" ${i===products.length-1?"disabled":""} onclick="moveProduct(${i},1)">↓</button>
+              </span>
+              <input value="${esc(p.name)}" style="flex:2;min-width:110px" onchange="updProductField('${p.id}','name',this.value)"/>
+              <input value="${esc(p.unit)}" style="width:64px" onchange="updProductField('${p.id}','unit',this.value)"/>
+              <input type="number" value="${p.base_price}" style="width:76px;text-align:right" onchange="updPrice('${p.id}',this.value)"/>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+              <span>${p.is_active?'<span class="badge b-green">上架</span>':'<span class="badge b-red">下架</span>'}</span>
+              <span>
+                <button class="btn2" onclick="toggleProduct('${p.id}',${p.is_active})">${p.is_active?'下架':'上架'}</button>
+                <button class="danger" onclick="deleteProduct('${p.id}','${esc(p.name)}')">刪除</button>
+              </span>
+            </div>
+          </div>`).join("")}
         <div class="dim" style="font-size:12px">※ 已有訂單記錄的商品無法刪除(保護歷史帳),只能下架</div>`;
     }
 
