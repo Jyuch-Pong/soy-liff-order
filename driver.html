@@ -190,6 +190,7 @@ function renderStore(s, isExtra){
           <b style="margin-left:4px">${esc(s.name)}</b>
           ${isExtra?`<span class="badge b-amber" style="margin-left:4px">梯次 ${esc(s.day_group||"?")}</span>`:""}
           <div class="addr">📍 ${esc(s.address||"")}</div>
+          ${s.note?`<div class="addr" style="color:var(--amber)">📝 ${esc(s.note)}</div>`:""}
         </div>
         ${delivered?'<span class="badge b-blue">✓ 已送達</span>'
           :ordered?'<span class="badge b-green">已訂貨</span>'
