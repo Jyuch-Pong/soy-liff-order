@@ -48,7 +48,14 @@
     background: var(--card); border: 1px solid var(--border); border-radius: 12px;
     padding: 12px 14px; margin-bottom: 8px;
     display: flex; justify-content: space-between; align-items: center;
+    border-left: 5px solid var(--border);
   }
+  .product.bag { border-left-color: #3b82f6; }
+  .product.cup { border-left-color: #f97316; }
+  .utag { display:inline-block; font-size:13px; font-weight:700; padding:1px 8px; border-radius:6px; margin-right:4px; }
+  .utag.bag { background:rgba(59,130,246,.18); color:#7eb3ff; }
+  .utag.cup { background:rgba(249,115,22,.18); color:#ffb27d; }
+  .utag.other { background:rgba(154,157,156,.15); color:var(--text2); }
   .product .pname { font-size: 18px; font-weight: 600; }
   .product .pinfo { font-size: 15px; color: var(--text3); margin-top: 2px; }
   .product .pinfo .custom { color: var(--amber); }
@@ -130,10 +137,10 @@ function render() {
     </div>
     <div class="section" style="padding-top:0">
       ${products.map(p => `
-        <div class="product">
+        <div class="product ${p.unit.includes('袋')?'bag':p.unit.includes('杯')?'cup':''}">
           <div>
             <div class="pname">${esc(p.name)}</div>
-            <div class="pinfo">${esc(p.unit)} · $${p.price}${p.isCustom ? ' <span class="custom">(專屬價)</span>' : ""}</div>
+            <div class="pinfo"><span class="utag ${p.unit.includes('袋')?'bag':p.unit.includes('杯')?'cup':'other'}">${esc(p.unit)}</span> $${p.price}${p.isCustom ? ' <span class="custom">(專屬價)</span>' : ""}</div>
           </div>
           <div class="qty">
             <button onclick="chg('${p.id}',-1)">−</button>
