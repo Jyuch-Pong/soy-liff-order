@@ -375,8 +375,10 @@ window.moveProduct = async (index,dir)=>{
   const j = index + dir;
   if (j < 0 || j >= products.length) return;
   [products[index], products[j]] = [products[j], products[index]];
-  await api("reorder_products",{body:{ids:products.map(p=>p.id)}});
-  loadTab();
+  try {
+    await api("reorder_products",{body:{ids:products.map(p=>p.id)}});
+    loadTab();
+  } catch(e){ alert("排序失敗:"+e.message); loadTab(); }
 };
 window.toggleProduct = async (id,active)=>{
   await api("update_product",{body:{id,is_active:!active}}); loadTab();
