@@ -148,8 +148,14 @@ function render(){
     </div>
     <div class="wrap">
       ${renderTotals()}
+      ${(data.extraStores&&data.extraStores.length)?`
+        <div class="card" style="border-color:var(--amber)">
+          <b class="amber">⚠️ 非配送日訂單(${data.extraStores.length})</b>
+          <div class="dim" style="font-size:12px;margin:4px 0 8px">這些店家今天不是他們的配送梯次,但有指定今天配送的訂單,請記得送</div>
+          ${data.extraStores.map(s=>renderStore(s,true)).join("")}
+        </div>`:""}
       ${data.stores.length===0?'<div class="card dim">此日期無配送店家</div>':""}
-      ${data.stores.map(renderStore).join("")}
+      ${data.stores.map(s=>renderStore(s,false)).join("")}
     </div>`;
 }
 
@@ -171,17 +177,18 @@ function renderTotals(){
     </div>`;
 }
 
-function renderStore(s){
+function renderStore(s, isExtra){
   const ordered = !!s.order;
   const delivered = ordered && s.order.status==="delivered";
   const cls = delivered ? "s-done" : ordered ? "s-green" : "s-red";
   const isBuilding = builder && builder.storeId===s.id;
   return `
-    <div class="scard ${cls}">
+    <div class="scard ${cls}" ${isExtra?'style="border-style:dashed"':""}>
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
         <div>
           <span class="mono dim" style="font-size:11px;font-weight:700">${esc(s.store_code)}</span>
           <b style="margin-left:4px">${esc(s.name)}</b>
+          ${isExtra?`<span class="badge b-amber" style="margin-left:4px">梯次 ${esc(s.day_group||"?")}</span>`:""}
           <div class="addr">📍 ${esc(s.address||"")}</div>
         </div>
         ${delivered?'<span class="badge b-blue">✓ 已送達</span>'
