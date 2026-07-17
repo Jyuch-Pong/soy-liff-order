@@ -209,8 +209,12 @@ async function loadTab(){
           </div>
         </div>
         <div class="card"><table>
-          <tr><th>商品</th><th>單位</th><th style="text-align:right">基礎價</th><th>狀態</th><th style="text-align:right"></th></tr>
-          ${products.map(p=>`<tr>
+          <tr><th style="width:60px">排序</th><th>商品</th><th>單位</th><th style="text-align:right">基礎價</th><th>狀態</th><th style="text-align:right"></th></tr>
+          ${products.map((p,i)=>`<tr>
+            <td style="white-space:nowrap">
+              <button class="btn2" style="padding:3px 7px" ${i===0?"disabled":""} onclick="moveProduct(${i},-1)">↑</button>
+              <button class="btn2" style="padding:3px 7px" ${i===products.length-1?"disabled":""} onclick="moveProduct(${i},1)">↓</button>
+            </td>
             <td><input value="${esc(p.name)}" style="width:130px" onchange="updProductField('${p.id}','name',this.value)"/></td>
             <td><input value="${esc(p.unit)}" style="width:80px" onchange="updProductField('${p.id}','unit',this.value)"/></td>
             <td style="text-align:right"><input type="number" value="${p.base_price}" style="width:80px;text-align:right" onchange="updPrice('${p.id}',this.value)"/></td>
@@ -366,6 +370,13 @@ window.updPrice = async (id,v)=>{ await api("update_product",{body:{id,base_pric
 window.updProductField = async (id,field,v)=>{
   if (!v.trim()) return alert("不可為空白");
   await api("update_product",{body:{id,[field]:v.trim()}});
+};
+window.moveProduct = async (index,dir)=>{
+  const j = index + dir;
+  if (j < 0 || j >= products.length) return;
+  [products[index], products[j]] = [products[j], products[index]];
+  await api("reorder_products",{body:{ids:products.map(p=>p.id)}});
+  loadTab();
 };
 window.toggleProduct = async (id,active)=>{
   await api("update_product",{body:{id,is_active:!active}}); loadTab();
