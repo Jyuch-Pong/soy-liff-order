@@ -45,9 +45,10 @@
   .oitem{font-size:12px;color:var(--text2);display:flex;justify-content:space-between;padding:2px 0}
   .qtyrow{display:flex;justify-content:space-between;align-items:center;padding:5px 0}
   .qtyrow .ctrl{display:flex;align-items:center;gap:10px}
-  .qtyrow button{width:30px;height:30px;border-radius:50%;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:16px}
+  .qtyrow button{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:18px}
   .qtyrow button.p{background:var(--green-d);border-color:var(--green-d);color:#fff}
-  .qtyrow .n{min-width:22px;text-align:center;font-family:monospace}
+  .qtyrow input.n{width:56px;height:36px;text-align:center;font-family:monospace;font-size:16px;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:8px}
+  .qtyrow input.n::-webkit-outer-spin-button,.qtyrow input.n::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
   details summary{cursor:pointer;padding:4px 0}
   .addr{font-size:12px;color:var(--text2);margin-top:2px}
   .rowbtns{display:flex;gap:8px;margin-top:10px}
@@ -230,7 +231,8 @@ function renderBuilder(s){
           <span style="font-size:13px">${esc(p.name)} <span class="dim" style="font-size:11px">${esc(p.unit)}</span></span>
           <div class="ctrl">
             <button onclick="chgQty('${p.id}',-1)">−</button>
-            <span class="n">${q}</span>
+            <input class="n" type="number" inputmode="numeric" min="0" value="${q}"
+              onchange="setBQty('${p.id}',this.value)" onfocus="this.select()" />
             <button class="p" onclick="chgQty('${p.id}',1)">＋</button>
           </div>
         </div>`}).join("")}
@@ -246,6 +248,7 @@ window.chgDate = (v)=>{ viewDate=v; builder=null; load(); };
 window.openBuilder = (storeId,mode,orderId)=>{ builder={storeId,mode,orderId,cart:{}}; render(); };
 window.closeBuilder = ()=>{ builder=null; render(); };
 window.chgQty = (pid,d)=>{ builder.cart[pid]=Math.max(0,(builder.cart[pid]||0)+d); render(); };
+window.setBQty = (pid,v)=>{ builder.cart[pid]=Math.max(0,Math.floor(Number(v)||0)); render(); };
 
 window.submitBuilder = async ()=>{
   const items = Object.entries(builder.cart).filter(([,q])=>q>0).map(([productId,qty])=>({productId,qty}));
