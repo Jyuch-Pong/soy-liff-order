@@ -49,6 +49,7 @@
 </head>
 <body>
 <div id="app"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ====== 設定 ======
 const API = "https://whwhufkehoxgrrwacqjv.supabase.co/functions/v1/admin-api";
@@ -86,7 +87,7 @@ async function api(action, opts={}){
 function renderLogin(msg){
   app.innerHTML = `
     <div class="login">
-      <h2>🥛 訂貨系統 Admin</h2>
+      <h2>🥛 訂貨系統</h2>
       ${msg?`<div class="red" style="margin-top:8px">${esc(msg)}</div>`:""}
       <input type="password" id="pw" placeholder="管理密碼" />
       <button class="btn" onclick="doLogin()">登入</button>
@@ -107,7 +108,7 @@ async function boot(){ render(); await loadTab(); }
 
 function render(){
   app.innerHTML = `
-    <div class="topbar"><span class="title">🥛 訂貨系統 Admin <span class="dim" style="font-size:11px">v4</span></span>
+    <div class="topbar"><span class="title">🥛 訂貨系統</span>
       <button class="btn2" onclick="logout()">登出</button></div>
     <div class="tabs">
       ${[["orders","訂單"],["summary","品項統計"],["stores","店家"],["products","商品"],["prices","客製價"],["drivers","司機"],["routes","路線"]].map(([k,l])=>
@@ -130,6 +131,7 @@ async function loadTab(){
           <input type="date" value="${orderDate}" onchange="chgDate(this.value)" />
           <button class="btn2" onclick="chgDate('')">全部日期</button>
           <span class="dim">共 ${orders.length} 筆</span>
+          <button class="btn2" onclick="exportOrders()">📥 匯出Excel</button>
         </div>
         ${orders.length===0?'<div class="card dim">此日期尚無訂單</div>':""}
         ${orders.map(o=>`
@@ -400,6 +402,36 @@ window.cancelOrder = async (id)=>{
   const reason = prompt("刪除原因(將記錄於異動log):");
   if (reason===null) return;
   await api("cancel_order",{body:{orderId:id,reason}}); loadTab();
+};
+
+window.exportOrders = ()=>{
+  if (!orders.length) return alert("目前沒有資料可匯出");
+  const rows = [["店號","店名","配送日","下單日","狀態","來源","商品","數量","單價","小計","訂單總額"]];
+  for (const o of orders){
+    const items = o.order_items||[];
+    if (items.length===0){
+      rows.push([o.stores.store_code,o.stores.name,o.delivery_date,o.order_date,
+        o.status==='cancelled'?'已刪除':'正常',o.source==='on_site'?'現場建單':'店家下單',
+        '','','','',o.total_amount]);
+    } else {
+      items.forEach((it,i)=>{
+        rows.push([
+          i===0?o.stores.store_code:'', i===0?o.stores.name:'',
+          i===0?o.delivery_date:'', i===0?o.order_date:'',
+          i===0?(o.status==='cancelled'?'已刪除':'正常'):'',
+          i===0?(o.source==='on_site'?'現場建單':'店家下單'):'',
+          it.products.name, it.quantity, it.unit_price, it.quantity*it.unit_price,
+          i===0?o.total_amount:'',
+        ]);
+      });
+    }
+  }
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:10},{wch:14},{wch:11},{wch:11},{wch:8},{wch:10},{wch:14},{wch:6},{wch:8},{wch:8},{wch:10}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "訂單");
+  const label = orderDate || "全部日期";
+  XLSX.writeFile(wb, `訂單匯出_${label}.xlsx`);
 };
 
 // ---- 司機操作 ----
