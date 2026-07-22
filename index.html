@@ -103,6 +103,7 @@ let products = [];
 let cart = {};        // productId -> qty
 let deliveryDate = "";
 let groupId = "";
+let editOrderId = ""; // 有值=編輯既有訂單模式
 
 const app = document.getElementById("app");
 
@@ -127,12 +128,12 @@ function render() {
   app.innerHTML = `
     <div class="header">
       <div class="code">[${esc(store.code)}]</div>
-      <div class="name">${esc(store.name)}</div>
+      <div class="name">${esc(store.name)}${editOrderId?' <span style="color:var(--amber);font-size:14px">(編輯訂單)</span>':""}</div>
     </div>
     <div class="section">
       <div class="date-row">
-        <label>配送日期(預設次日)</label>
-        <input type="date" id="ddate" value="${deliveryDate}" />
+        <label>配送日期${editOrderId?'(編輯中不可改)':'(預設次日)'}</label>
+        <input type="date" id="ddate" value="${deliveryDate}" ${editOrderId?'disabled':''} />
       </div>
     </div>
     <div class="section" style="padding-top:0">
@@ -153,7 +154,7 @@ function render() {
     </div>
     <div class="footer">
       <button class="submit" id="submitBtn" ${cartCount() === 0 ? "disabled" : ""} onclick="submitOrder()">
-        ${cartCount() === 0 ? "請選擇品項" : `送出訂單 · $${total}`}
+        ${cartCount() === 0 ? "請選擇品項" : editOrderId ? `更新訂單 · $${total}` : `送出訂單 · $${total}`}
       </button>
     </div>
   `;
@@ -185,7 +186,7 @@ window.submitOrder = async function () {
     const res = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ groupId, deliveryDate, items }),
+      body: JSON.stringify({ groupId, deliveryDate, items, ...(editOrderId?{orderId:editOrderId}:{}) }),
     });
     const data = await res.json();
     if (!res.ok || !data.ok) throw new Error(data.error || "下單失敗");
@@ -194,7 +195,7 @@ window.submitOrder = async function () {
     app.innerHTML = `
       <div class="success">
         <div class="icon">✅</div>
-        <div class="title">訂單已送出</div>
+        <div class="title">${editOrderId?'訂單已更新':'訂單已送出'}</div>
         <div class="detail">
           配送日 ${mm}/${dd}<br/>
           合計 $${data.total}<br/><br/>
@@ -219,22 +220,32 @@ window.submitOrder = async function () {
     // 取得groupId:優先從liff.state/網址參數拿
     const params = new URLSearchParams(location.search);
     groupId = params.get("groupId") || "";
-    if (!groupId && params.get("liff.state")) {
+    editOrderId = params.get("editOrder") || "";
+    if (params.get("liff.state")) {
       const stateParams = new URLSearchParams(params.get("liff.state").replace(/^\?/, ""));
-      groupId = stateParams.get("groupId") || "";
+      if (!groupId) groupId = stateParams.get("groupId") || "";
+      if (!editOrderId) editOrderId = stateParams.get("editOrder") || "";
     }
     if (!groupId) {
       app.innerHTML = '<div class="center">無法取得群組資訊,請從群組內的「叫貨」按鈕開啟</div>';
       return;
     }
 
-    const res = await fetch(`${API_URL}?groupId=${encodeURIComponent(groupId)}`);
+    const editParam = editOrderId ? `&editOrder=${encodeURIComponent(editOrderId)}` : "";
+    const res = await fetch(`${API_URL}?groupId=${encodeURIComponent(groupId)}${editParam}`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "載入失敗");
 
     store = data.store;
     products = data.products;
-    deliveryDate = data.defaultDeliveryDate;
+    if (data.editOrder) {
+      // 編輯模式:帶入原訂單品項與配送日,日期鎖定不可改
+      deliveryDate = data.editOrder.deliveryDate;
+      for (const it of data.editOrder.items) cart[it.productId] = it.quantity;
+    } else {
+      editOrderId = "";
+      deliveryDate = data.defaultDeliveryDate;
+    }
     render();
   } catch (e) {
     app.innerHTML = `<div class="center">載入失敗:${esc(e.message)}</div>`;
