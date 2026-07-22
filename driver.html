@@ -210,7 +210,8 @@ function renderStore(s, isExtra){
         </details>
         ${!isBuilding ? `
           <div class="rowbtns">
-            ${!delivered?`<button class="btn2" onclick="openBuilder('${s.id}','addon','${s.order.id}')">＋ 現場追加</button>`:""}
+            ${!delivered?`<button class="btn2" onclick="openEditBuilder('${s.id}','${s.order.id}')">✎ 編輯</button>`:""}
+            ${!delivered?`<button class="btn2" onclick="openBuilder('${s.id}','addon','${s.order.id}')">＋ 追加</button>`:""}
             ${!delivered?`<button class="btn" onclick="markDelivered('${s.order.id}')">✓ 送達</button>`:""}
           </div>`:""}
       ` : `
@@ -224,7 +225,7 @@ function renderStore(s, isExtra){
 function renderBuilder(s){
   return `
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-      <b style="font-size:13px">${builder.mode==='addon'?'追加品項':'建立訂單'}</b>
+      <b style="font-size:13px">${builder.mode==='addon'?'追加品項':builder.mode==='edit'?'編輯訂單(數量歸0=移除該品項)':'建立訂單'}</b>
       ${data.products.map(p=>{
         const q = builder.cart[p.id]||0;
         return `<div class="qtyrow">
@@ -238,7 +239,7 @@ function renderBuilder(s){
         </div>`}).join("")}
       <div class="rowbtns">
         <button class="btn2" onclick="closeBuilder()">取消</button>
-        <button class="btn" onclick="submitBuilder()">${builder.mode==='addon'?'確認追加':'建立訂單'}</button>
+        <button class="btn" onclick="submitBuilder()">${builder.mode==='addon'?'確認追加':builder.mode==='edit'?'儲存變更':'建立訂單'}</button>
       </div>
     </div>`;
 }
@@ -246,6 +247,13 @@ function renderBuilder(s){
 // ====== 操作 ======
 window.chgDate = (v)=>{ viewDate=v; builder=null; load(); };
 window.openBuilder = (storeId,mode,orderId)=>{ builder={storeId,mode,orderId,cart:{}}; render(); };
+window.openEditBuilder = (storeId,orderId)=>{
+  const s = data.stores.find(x=>x.id===storeId) || (data.extraStores||[]).find(x=>x.id===storeId);
+  const cart = {};
+  if (s && s.order) for (const it of s.order.items) cart[it.productId]=it.qty;
+  builder={storeId,mode:'edit',orderId,cart};
+  render();
+};
 window.closeBuilder = ()=>{ builder=null; render(); };
 window.chgQty = (pid,d)=>{ builder.cart[pid]=Math.max(0,(builder.cart[pid]||0)+d); render(); };
 window.setBQty = (pid,v)=>{ builder.cart[pid]=Math.max(0,Math.floor(Number(v)||0)); render(); };
@@ -256,6 +264,8 @@ window.submitBuilder = async ()=>{
   try {
     if (builder.mode==="new"){
       await api("create_onsite",{body:{storeId:builder.storeId,date:viewDate,items}});
+    } else if (builder.mode==="edit"){
+      await api("edit_order",{body:{orderId:builder.orderId,storeId:builder.storeId,items}});
     } else {
       await api("addon",{body:{orderId:builder.orderId,storeId:builder.storeId,items}});
     }
