@@ -144,7 +144,7 @@ async function loadTab(){
                 ${o.status==='cancelled'?'<span class="badge b-red">已刪除</span>':""}
                 <div class="dim" style="font-size:12px;margin-top:2px">配送 ${o.delivery_date} · 下單 ${o.order_date}</div>
               </div>
-              ${o.status!=='cancelled'?`<button class="danger" onclick="cancelOrder('${o.id}')">刪除</button>`:""}
+              ${o.status!=='cancelled'?`<span style="white-space:nowrap"><button class="btn2" onclick="editOrder('${o.id}')">編輯</button> <button class="danger" onclick="cancelOrder('${o.id}')">刪除</button></span>`:""}
             </div>
             <div style="margin-top:8px">
               ${(o.order_items||[]).map(it=>`<div class="oitem"><span>${esc(it.products.name)}</span><span class="mono dim">${it.quantity} × $${it.unit_price}</span></div>`).join("")}
@@ -402,6 +402,74 @@ window.cancelOrder = async (id)=>{
   const reason = prompt("刪除原因(將記錄於異動log):");
   if (reason===null) return;
   await api("cancel_order",{body:{orderId:id,reason}}); loadTab();
+};
+
+let editState = null; // {orderId, cart:{productId:qty}, priceList, storeName}
+
+window.editOrder = async (orderId)=>{
+  try {
+    const d = await api("order_detail",{params:{orderId}});
+    const cart = {};
+    (d.order.order_items||[]).forEach(it=>{ cart[it.product_id]=Number(it.quantity); });
+    editState = { orderId, cart, priceList:d.priceList,
+      storeName:`[${d.order.stores.store_code}] ${d.order.stores.name}`,
+      deliveryDate:d.order.delivery_date };
+    renderEditModal();
+  } catch(e){ alert("載入失敗:"+e.message); }
+};
+
+function renderEditModal(){
+  const es = editState;
+  let total = 0;
+  for (const p of es.priceList){ total += (es.cart[p.id]||0)*p.price; }
+  const html = `
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeEdit()">
+      <div style="background:var(--card);width:100%;max-width:520px;max-height:88vh;border-radius:16px 16px 0 0;display:flex;flex-direction:column">
+        <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+          <b>編輯訂單</b>
+          <div class="dim" style="font-size:12px;margin-top:2px">${esc(es.storeName)} · 配送 ${es.deliveryDate}</div>
+        </div>
+        <div style="overflow-y:auto;padding:8px 16px;flex:1">
+          ${es.priceList.map(p=>{
+            const q = es.cart[p.id]||0;
+            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #2a2d30">
+              <div><div>${esc(p.name)}</div><div class="dim" style="font-size:12px">${esc(p.unit)} · $${p.price}</div></div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <button class="btn2" style="width:34px;height:34px;border-radius:50%" onclick="editQty('${p.id}',-1)">−</button>
+                <input type="number" inputmode="numeric" min="0" value="${q}" style="width:56px;height:34px;text-align:center"
+                  onchange="editSetQty('${p.id}',this.value)" onfocus="this.select()"/>
+                <button class="btn" style="width:34px;height:34px;border-radius:50%;padding:0" onclick="editQty('${p.id}',1)">＋</button>
+              </div>
+            </div>`}).join("")}
+        </div>
+        <div style="padding:14px 16px;border-top:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+            <span class="dim">訂單總額</span><b style="font-size:18px">$${total.toLocaleString()}</b>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn2" style="flex:1" onclick="closeEdit()">取消</button>
+            <button class="btn" style="flex:2" onclick="saveEdit()">儲存變更</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  let modal = document.getElementById("editModal");
+  if (!modal){ modal=document.createElement("div"); modal.id="editModal"; document.body.appendChild(modal); }
+  modal.innerHTML = html;
+}
+
+window.editQty = (pid,d)=>{ editState.cart[pid]=Math.max(0,(editState.cart[pid]||0)+d); renderEditModal(); };
+window.editSetQty = (pid,v)=>{ editState.cart[pid]=Math.max(0,Math.floor(Number(v)||0)); renderEditModal(); };
+window.closeEdit = ()=>{ const m=document.getElementById("editModal"); if(m)m.innerHTML=""; editState=null; };
+window.saveEdit = async ()=>{
+  const reason = prompt("修改原因(將記錄於異動log):");
+  if (reason===null) return;
+  const items = Object.entries(editState.cart).map(([productId,quantity])=>({productId,quantity}));
+  try {
+    await api("update_order_items",{body:{orderId:editState.orderId,items,reason}});
+    closeEdit();
+    loadTab();
+  } catch(e){ alert("儲存失敗:"+e.message); }
 };
 
 window.exportOrders = ()=>{
