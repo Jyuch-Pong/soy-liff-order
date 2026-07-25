@@ -137,9 +137,16 @@ function renderHistory() {
       <div class="name">${esc(store.name)} <span style="color:var(--text2);font-size:15px">訂單查詢</span></div>
     </div>
     <div class="section">
-      <div style="background:var(--card);border:1px solid var(--green-dark);border-radius:12px;padding:14px;display:flex;justify-content:space-between;align-items:center">
-        <span style="color:var(--text2)">本月累計(${history.monthLabel})</span>
-        <b style="font-size:22px;color:var(--green)">$${history.monthTotal.toLocaleString()}</b>
+      <div style="background:var(--card);border:1px solid var(--green-dark);border-radius:12px;padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="color:var(--text2)">本月累計(${history.monthLabel},已配送)</span>
+          <b style="font-size:22px;color:var(--green)">$${history.monthTotal.toLocaleString()}</b>
+        </div>
+        ${history.pendingTotal>0?`
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+          <span style="color:var(--text2)">未配送訂單</span>
+          <b style="font-size:17px;color:var(--amber)">$${history.pendingTotal.toLocaleString()}</b>
+        </div>`:""}
       </div>
       <div style="color:var(--text3);font-size:13px;margin:6px 2px 0">顯示最近30天訂單,依配送日排序</div>
     </div>
