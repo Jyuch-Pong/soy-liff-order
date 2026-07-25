@@ -104,6 +104,8 @@ let cart = {};        // productId -> qty
 let deliveryDate = "";
 let groupId = "";
 let editOrderId = ""; // 有值=編輯既有訂單模式
+let viewOrders = false; // true=歷史訂單查詢模式
+let history = null;
 
 const app = document.getElementById("app");
 
@@ -121,6 +123,42 @@ function cartTotal() {
 }
 function cartCount() {
   return Object.values(cart).filter(q => q > 0).length;
+}
+
+function renderHistory() {
+  const statusBadge = (o) => {
+    if (o.status === "cancelled") return '<span style="color:var(--red);font-size:13px;border:1px solid var(--red);border-radius:99px;padding:1px 8px">已取消</span>';
+    if (o.status === "delivered") return '<span style="color:#60a5fa;font-size:13px;border:1px solid #60a5fa;border-radius:99px;padding:1px 8px">已送達</span>';
+    return '<span style="color:var(--green);font-size:13px;border:1px solid var(--green);border-radius:99px;padding:1px 8px">已成立</span>';
+  };
+  app.innerHTML = `
+    <div class="header">
+      <div class="code">[${esc(store.code)}]</div>
+      <div class="name">${esc(store.name)} <span style="color:var(--text2);font-size:15px">訂單查詢</span></div>
+    </div>
+    <div class="section">
+      <div style="background:var(--card);border:1px solid var(--green-dark);border-radius:12px;padding:14px;display:flex;justify-content:space-between;align-items:center">
+        <span style="color:var(--text2)">本月累計(${history.monthLabel})</span>
+        <b style="font-size:22px;color:var(--green)">$${history.monthTotal.toLocaleString()}</b>
+      </div>
+      <div style="color:var(--text3);font-size:13px;margin:6px 2px 0">顯示最近30天訂單,依配送日排序</div>
+    </div>
+    <div class="section" style="padding-top:0">
+      ${history.orders.length===0?'<div style="color:var(--text3);text-align:center;padding:40px 0">最近30天沒有訂單</div>':""}
+      ${history.orders.map(o=>{
+        const [, mm, dd] = o.deliveryDate.split("-");
+        return `
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;${o.status==='cancelled'?'opacity:.5':''}">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <b>配送 ${mm}/${dd}</b>
+            ${statusBadge(o)}
+          </div>
+          <div style="margin-top:8px">
+            ${o.items.map(it=>`<div style="display:flex;justify-content:space-between;font-size:15px;color:var(--text2);padding:2px 0"><span>${esc(it.name)}</span><span style="font-family:monospace">${it.qty} × $${it.price}</span></div>`).join("")}
+          </div>
+          <div style="text-align:right;font-weight:700;margin-top:6px;font-size:17px">$${o.total.toLocaleString()}</div>
+        </div>`}).join("")}
+    </div>`;
 }
 
 function render() {
@@ -221,22 +259,30 @@ window.submitOrder = async function () {
     const params = new URLSearchParams(location.search);
     groupId = params.get("groupId") || "";
     editOrderId = params.get("editOrder") || "";
+    viewOrders = params.get("view") === "orders";
     if (params.get("liff.state")) {
       const stateParams = new URLSearchParams(params.get("liff.state").replace(/^\?/, ""));
       if (!groupId) groupId = stateParams.get("groupId") || "";
       if (!editOrderId) editOrderId = stateParams.get("editOrder") || "";
+      if (!viewOrders) viewOrders = stateParams.get("view") === "orders";
     }
     if (!groupId) {
       app.innerHTML = '<div class="center">無法取得群組資訊,請從群組內的「叫貨」按鈕開啟</div>';
       return;
     }
 
-    const editParam = editOrderId ? `&editOrder=${encodeURIComponent(editOrderId)}` : "";
-    const res = await fetch(`${API_URL}?groupId=${encodeURIComponent(groupId)}${editParam}`);
+    const extraParam = viewOrders ? "&view=orders"
+      : (editOrderId ? `&editOrder=${encodeURIComponent(editOrderId)}` : "");
+    const res = await fetch(`${API_URL}?groupId=${encodeURIComponent(groupId)}${extraParam}`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "載入失敗");
 
     store = data.store;
+    if (viewOrders) {
+      history = data.history;
+      renderHistory();
+      return;
+    }
     products = data.products;
     if (data.editOrder) {
       // 編輯模式:帶入原訂單品項與配送日,日期鎖定不可改
