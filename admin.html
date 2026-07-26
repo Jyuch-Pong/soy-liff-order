@@ -316,6 +316,7 @@ async function loadTab(){
     // ============ 路線 ============
     if (tab==="routes"){
       const data = await api("routes_overview");
+      window.routesData = data;
       const routeKeys = Object.keys(data.routes).sort();
       c.innerHTML = `
         ${routeKeys.length===0?'<div class="card dim">尚無店家路線資料</div>':""}
@@ -336,8 +337,15 @@ async function loadTab(){
             </div>
             ${Object.keys(groups).sort().map(dg=>`
               <details>
-                <summary>梯次 ${esc(dg)} — ${groups[dg].length} 間店家</summary>
-                ${groups[dg].map(s=>`<div class="storeline"><span class="mono green">${esc(s.code)}</span> ${esc(s.name)} ${s.status!=='active'?'<span class="red">(停用)</span>':""}</div>`).join("")}
+                <summary>梯次 ${esc(dg)} — ${groups[dg].length} 間店家(↑↓調整配送順序)</summary>
+                ${groups[dg].map((s,i)=>`<div class="storeline" style="display:flex;align-items:center;gap:6px">
+                  <span style="display:inline-flex;gap:3px">
+                    <button class="btn2" style="padding:2px 7px" ${i===0?"disabled":""} onclick="moveRouteStore('${esc(rc)}','${esc(dg)}',${i},-1)">↑</button>
+                    <button class="btn2" style="padding:2px 7px" ${i===groups[dg].length-1?"disabled":""} onclick="moveRouteStore('${esc(rc)}','${esc(dg)}',${i},1)">↓</button>
+                  </span>
+                  <span class="dim mono" style="font-size:11px;width:22px;text-align:right">${i+1}.</span>
+                  <span class="mono green">${esc(s.code)}</span> ${esc(s.name)} ${s.status!=='active'?'<span class="red">(停用)</span>':""}
+                </div>`).join("")}
               </details>`).join("")}
           </div>`}).join("")}
         <div class="dim" style="font-size:12px">※ 店家的路線/梯次在「店家」分頁設定;司機的路線指派在「司機」分頁設定</div>`;
@@ -531,6 +539,16 @@ window.addDriverRoute = async (driverId)=>{
 };
 window.delDriverRoute = async (id)=>{
   await api("delete_driver_route",{body:{id}}); loadTab();
+};
+window.moveRouteStore = async (rc,dg,i,dir)=>{
+  const arr = window.routesData.routes[rc][dg];
+  const j = i + dir;
+  if (j < 0 || j >= arr.length) return;
+  [arr[i], arr[j]] = [arr[j], arr[i]];
+  try {
+    await api("reorder_route_stores",{body:{ids:arr.map(s=>s.id)}});
+    loadTab();
+  } catch(e){ alert("排序失敗:"+e.message); loadTab(); }
 };
 
 // ====== 啟動 ======
