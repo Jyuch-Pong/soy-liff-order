@@ -11,12 +11,12 @@
     --amber:#f59e0b; --red:#f43f5e;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--text);font-family:-apple-system,"Noto Sans TC",sans-serif;font-size:14px;padding-bottom:20px}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,"Noto Sans TC",sans-serif;font-size:16px;padding-bottom:20px}
   .topbar{background:var(--green-d);color:#fff;padding:12px 16px;position:sticky;top:0;z-index:10}
-  .topbar .name{font-weight:700;font-size:15px}
-  .topbar .sub{font-size:12px;opacity:.85;margin-top:2px}
+  .topbar .name{font-weight:700;font-size:17px}
+  .topbar .sub{font-size:14px;opacity:.85;margin-top:2px}
   .bar2{background:var(--card);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
-  input,select{background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:14px}
+  input,select{background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:16px}
   input[type=date]{color-scheme:dark}
   .wrap{padding:12px;max-width:560px;margin:0 auto}
   .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px}
@@ -26,23 +26,23 @@
   .s-done{background:rgba(16,185,129,.04);border-color:rgba(16,185,129,.2);opacity:.75}
   .mono{font-family:monospace}
   .green{color:var(--green)} .amber{color:var(--amber)} .red{color:var(--red)} .dim{color:var(--text3)}
-  .badge{font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid;white-space:nowrap}
+  .badge{font-size:13px;padding:2px 8px;border-radius:99px;border:1px solid;white-space:nowrap}
   .b-green{color:var(--green);border-color:var(--green)}
   .b-red{color:var(--red);border-color:var(--red)}
   .b-amber{color:var(--amber);border-color:var(--amber)}
   .b-blue{color:#60a5fa;border-color:#60a5fa}
-  button.btn{background:var(--green-d);color:#fff;border:none;border-radius:10px;padding:9px 14px;font-size:13px;font-weight:600}
-  button.btn-red{background:var(--red);color:#fff;border:none;border-radius:10px;padding:9px 14px;font-size:13px;font-weight:600}
-  button.btn2{background:none;color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px}
+  button.btn{background:var(--green-d);color:#fff;border:none;border-radius:10px;padding:9px 14px;font-size:15px;font-weight:600}
+  button.btn-red{background:var(--red);color:#fff;border:none;border-radius:10px;padding:9px 14px;font-size:15px;font-weight:600}
+  button.btn2{background:none;color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:14px}
   .full{width:100%}
   .login{max-width:300px;margin:110px auto;text-align:center}
   .login input{width:100%;margin:8px 0;padding:11px}
   .login button{width:100%;padding:11px;margin-top:8px}
-  table{width:100%;border-collapse:collapse;font-size:13px}
+  table{width:100%;border-collapse:collapse;font-size:15px}
   th{color:var(--text2);text-align:left;font-weight:500;padding:5px 6px;border-bottom:1px solid var(--border)}
   td{padding:6px;border-bottom:1px solid #2a2d30}
   tr:last-child td{border-bottom:none}
-  .oitem{font-size:12px;color:var(--text2);display:flex;justify-content:space-between;padding:2px 0}
+  .oitem{font-size:14px;color:var(--text2);display:flex;justify-content:space-between;padding:2px 0}
   .qtyrow{display:flex;justify-content:space-between;align-items:center;padding:5px 0}
   .qtyrow .ctrl{display:flex;align-items:center;gap:10px}
   .qtyrow button{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:18px}
@@ -50,7 +50,7 @@
   .qtyrow input.n{width:56px;height:36px;text-align:center;font-family:monospace;font-size:16px;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:8px}
   .qtyrow input.n::-webkit-outer-spin-button,.qtyrow input.n::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
   details summary{cursor:pointer;padding:4px 0}
-  .addr{font-size:12px;color:var(--text2);margin-top:2px}
+  .addr{font-size:14px;color:var(--text2);margin-top:2px}
   .rowbtns{display:flex;gap:8px;margin-top:10px}
   .rowbtns button{flex:1}
 </style>
@@ -137,7 +137,7 @@ function render(){
     <div class="topbar">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
-          <div class="name">🚚 ${esc(CRED.name)} <span style="font-weight:400;font-size:12px;opacity:.85">${esc(CRED.car_no||"")}</span></div>
+          <div class="name">🚚 ${esc(CRED.name)} <span style="font-weight:400;font-size:14px;opacity:.85">${esc(CRED.car_no||"")}</span></div>
           <div class="sub">${viewDate}(${weekdayTW(viewDate)}) · 路線 ${data.routes.join("、")||"無"} · 梯次 ${esc(data.dayGroup||"-")}</div>
         </div>
         <button class="btn2" style="color:#fff;border-color:rgba(255,255,255,.4)" onclick="logout()">登出</button>
@@ -152,7 +152,7 @@ function render(){
       ${(data.extraStores&&data.extraStores.length)?`
         <div class="card" style="border-color:var(--amber)">
           <b class="amber">⚠️ 非配送日訂單(${data.extraStores.length})</b>
-          <div class="dim" style="font-size:12px;margin:4px 0 8px">這些店家今天不是他們的配送梯次,但有指定今天配送的訂單,請記得送</div>
+          <div class="dim" style="font-size:14px;margin:4px 0 8px">這些店家今天不是他們的配送梯次,但有指定今天配送的訂單,請記得送</div>
           ${data.extraStores.map(s=>renderStore(s,true)).join("")}
         </div>`:""}
       ${data.stores.length===0?'<div class="card dim">此日期無配送店家</div>':""}
@@ -187,7 +187,7 @@ function renderStore(s, isExtra){
     <div class="scard ${cls}" ${isExtra?'style="border-style:dashed"':""}>
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
         <div>
-          <span class="mono dim" style="font-size:11px;font-weight:700">${esc(s.store_code)}</span>
+          <span class="mono dim" style="font-size:13px;font-weight:700">${esc(s.store_code)}</span>
           <b style="margin-left:4px">${esc(s.name)}</b>
           ${isExtra?`<span class="badge b-amber" style="margin-left:4px">梯次 ${esc(s.day_group||"?")}</span>`:""}
           <div class="addr">📍 ${esc(s.address||"")}</div>
@@ -201,7 +201,7 @@ function renderStore(s, isExtra){
       ${ordered ? `
         <details style="margin-top:8px">
           <summary style="display:flex;justify-content:space-between">
-            <span class="dim" style="font-size:12px">訂貨明細 ${s.order.source==='on_site'?'<span class="badge b-amber">現場建單</span>':""}</span>
+            <span class="dim" style="font-size:14px">訂貨明細 ${s.order.source==='on_site'?'<span class="badge b-amber">現場建單</span>':""}</span>
             <b>$${s.order.total.toLocaleString()}</b>
           </summary>
           <div style="margin-top:6px">
@@ -225,11 +225,11 @@ function renderStore(s, isExtra){
 function renderBuilder(s){
   return `
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-      <b style="font-size:13px">${builder.mode==='addon'?'追加品項':builder.mode==='edit'?'編輯訂單(數量歸0=移除該品項)':'建立訂單'}</b>
+      <b style="font-size:15px">${builder.mode==='addon'?'追加品項':builder.mode==='edit'?'編輯訂單(數量歸0=移除該品項)':'建立訂單'}</b>
       ${data.products.map(p=>{
         const q = builder.cart[p.id]||0;
         return `<div class="qtyrow">
-          <span style="font-size:13px">${esc(p.name)} <span class="dim" style="font-size:11px">${esc(p.unit)}</span></span>
+          <span style="font-size:15px">${esc(p.name)} <span class="dim" style="font-size:13px">${esc(p.unit)}</span></span>
           <div class="ctrl">
             <button onclick="chgQty('${p.id}',-1)">−</button>
             <input class="n" type="number" inputmode="numeric" min="0" value="${q}"
