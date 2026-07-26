@@ -337,13 +337,11 @@ async function loadTab(){
             </div>
             ${Object.keys(groups).sort().map(dg=>`
               <details>
-                <summary>梯次 ${esc(dg)} — ${groups[dg].length} 間店家(↑↓調整配送順序)</summary>
-                ${groups[dg].map((s,i)=>`<div class="storeline" style="display:flex;align-items:center;gap:6px">
-                  <span style="display:inline-flex;gap:3px">
-                    <button class="btn2" style="padding:2px 7px" ${i===0?"disabled":""} onclick="moveRouteStore('${esc(rc)}','${esc(dg)}',${i},-1)">↑</button>
-                    <button class="btn2" style="padding:2px 7px" ${i===groups[dg].length-1?"disabled":""} onclick="moveRouteStore('${esc(rc)}','${esc(dg)}',${i},1)">↓</button>
-                  </span>
-                  <span class="dim mono" style="font-size:11px;width:22px;text-align:right">${i+1}.</span>
+                <summary>梯次 ${esc(dg)} — ${groups[dg].length} 間店家(在序號框輸入數字即插入該位置,其餘自動順移)</summary>
+                ${groups[dg].map((s,i)=>`<div class="storeline" style="display:flex;align-items:center;gap:8px">
+                  <input type="number" inputmode="numeric" min="1" max="${groups[dg].length}" value="${i+1}"
+                    style="width:52px;text-align:center"
+                    onchange="setRouteStorePos('${esc(rc)}','${esc(dg)}',${i},this.value)" onfocus="this.select()"/>
                   <span class="mono green">${esc(s.code)}</span> ${esc(s.name)} ${s.status!=='active'?'<span class="red">(停用)</span>':""}
                 </div>`).join("")}
               </details>`).join("")}
@@ -540,11 +538,14 @@ window.addDriverRoute = async (driverId)=>{
 window.delDriverRoute = async (id)=>{
   await api("delete_driver_route",{body:{id}}); loadTab();
 };
-window.moveRouteStore = async (rc,dg,i,dir)=>{
+window.setRouteStorePos = async (rc,dg,i,val)=>{
   const arr = window.routesData.routes[rc][dg];
-  const j = i + dir;
-  if (j < 0 || j >= arr.length) return;
-  [arr[i], arr[j]] = [arr[j], arr[i]];
+  let pos = Math.floor(Number(val)) - 1; // 目標位置(0-based)
+  if (!Number.isFinite(pos)) { loadTab(); return; }
+  pos = Math.max(0, Math.min(arr.length - 1, pos));
+  if (pos === i) { loadTab(); return; }
+  const [moved] = arr.splice(i, 1); // 取出該店
+  arr.splice(pos, 0, moved);        // 插入目標位置,其餘自動順移
   try {
     await api("reorder_route_stores",{body:{ids:arr.map(s=>s.id)}});
     loadTab();
