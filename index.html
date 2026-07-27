@@ -105,9 +105,22 @@ let deliveryDate = "";
 let groupId = "";
 let editOrderId = ""; // 有值=編輯既有訂單模式
 let viewOrders = false; // true=歷史訂單查詢模式
+let deliveryWeekdays = null; // 該店配送星期[1,4]之類
 let history = null;
 
 const app = document.getElementById("app");
+
+function weekdayName(dateStr) {
+  return new Intl.DateTimeFormat("zh-TW", { timeZone: "Asia/Taipei", weekday: "short" })
+    .format(new Date(dateStr + "T12:00:00+08:00"));
+}
+function isOffDay(dateStr) {
+  if (!deliveryWeekdays || !dateStr) return false;
+  const wd = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Taipei", weekday: "short" })
+    .format(new Date(dateStr + "T12:00:00+08:00"));
+  const map = { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 };
+  return !deliveryWeekdays.includes(map[wd]);
+}
 
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
@@ -177,9 +190,15 @@ function render() {
     </div>
     <div class="section">
       <div class="date-row">
-        <label>配送日期${editOrderId?'(編輯中不可改)':'(預設次日)'}</label>
+        <label>配送日期${editOrderId?'(編輯中不可改)':''}</label>
         <input type="date" id="ddate" value="${deliveryDate}" ${editOrderId?'disabled':''} />
       </div>
+      ${(!editOrderId && isOffDay(deliveryDate)) ? `
+        <div style="background:rgba(245,158,11,.12);border:1px solid var(--amber);color:var(--amber);
+                    border-radius:10px;padding:10px 12px;margin-top:8px;font-size:15px">
+          ⚠️ ${deliveryDate.slice(5).replace("-","/")}(${weekdayName(deliveryDate)})不是貴店的固定配送日<br/>
+          <span style="font-size:14px">固定配送:${store.dayGroup||"未設定"};如需此日配送請與我們確認</span>
+        </div>` : ""}
     </div>
     <div class="section" style="padding-top:0">
       ${products.map(p => `
@@ -205,6 +224,7 @@ function render() {
   `;
   document.getElementById("ddate").addEventListener("change", (e) => {
     deliveryDate = e.target.value;
+    render(); // 重新繪製以更新非配送日提醒
   });
 }
 
@@ -285,6 +305,7 @@ window.submitOrder = async function () {
     if (!res.ok) throw new Error(data.error || "載入失敗");
 
     store = data.store;
+    deliveryWeekdays = data.deliveryWeekdays || null;
     if (viewOrders) {
       history = data.history;
       renderHistory();
