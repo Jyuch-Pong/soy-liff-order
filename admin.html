@@ -3,337 +3,583 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>豆漿訂貨</title>
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<title>豆漿訂貨 Admin</title>
 <style>
   :root {
-    --bg: #17181a;
-    --card: #1f2123;
-    --border: #34383b;
-    --text: #EDEDEB;
-    --text2: #9a9d9c;
-    --text3: #787c7a;
-    --green: #10b981;
-    --green-dark: #059669;
-    --amber: #f59e0b;
+    --bg:#17181a; --card:#1f2123; --border:#34383b; --text:#EDEDEB;
+    --text2:#9a9d9c; --text3:#787c7a; --green:#10b981; --green-d:#059669;
+    --amber:#f59e0b; --red:#f43f5e;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, "Noto Sans TC", sans-serif;
-    min-height: 100vh;
-    padding-bottom: 100px;
-    font-size: 17px;
-  }
-  .header {
-    background: var(--card);
-    border-bottom: 1px solid var(--border);
-    padding: 14px 16px;
-    position: sticky; top: 0; z-index: 10;
-  }
-  .header .code { color: var(--green); font-family: monospace; font-size: 14px; font-weight: 700; }
-  .header .name { font-size: 20px; font-weight: 700; margin-top: 2px; }
-  .section { padding: 12px 16px; }
-  .date-row {
-    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-    padding: 12px 14px; display: flex; justify-content: space-between; align-items: center;
-  }
-  .date-row label { font-size: 16px; color: var(--text2); }
-  .date-row input {
-    background: var(--bg); color: var(--text); border: 1px solid var(--border);
-    border-radius: 8px; padding: 8px 12px; font-size: 17px;
-  }
-  .product {
-    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-    padding: 12px 14px; margin-bottom: 8px;
-    display: flex; justify-content: space-between; align-items: center;
-    border-left: 5px solid var(--border);
-  }
-  .product.bag { border-left-color: #3b82f6; }
-  .product.cup { border-left-color: #f97316; }
-  .utag { display:inline-block; font-size:13px; font-weight:700; padding:1px 8px; border-radius:6px; margin-right:4px; }
-  .utag.bag { background:rgba(59,130,246,.18); color:#7eb3ff; }
-  .utag.cup { background:rgba(249,115,22,.18); color:#ffb27d; }
-  .utag.other { background:rgba(154,157,156,.15); color:var(--text2); }
-  .product .pname { font-size: 18px; font-weight: 600; }
-  .product .pinfo { font-size: 15px; color: var(--text3); margin-top: 2px; }
-  .product .pinfo .custom { color: var(--amber); }
-  .qty { display: flex; align-items: center; gap: 8px; }
-  .qty button {
-    width: 42px; height: 42px; border-radius: 50%;
-    border: 1px solid var(--border); background: var(--bg); color: var(--text);
-    font-size: 22px; line-height: 1;
-  }
-  .qty button.plus { background: var(--green-dark); border-color: var(--green-dark); color: #fff; }
-  .qty input.num {
-    width: 64px; height: 42px; text-align: center; font-family: monospace; font-size: 20px;
-    background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 10px;
-  }
-  .qty input.num::-webkit-outer-spin-button, .qty input.num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-  .footer {
-    position: fixed; bottom: 0; left: 0; right: 0;
-    background: var(--card); border-top: 1px solid var(--border); padding: 12px 16px;
-  }
-  .submit {
-    width: 100%; padding: 16px; border-radius: 12px; border: none;
-    background: var(--green-dark); color: #fff; font-size: 18px; font-weight: 700;
-  }
-  .submit:disabled { background: #2a2d30; color: #54585a; }
-  .center { text-align: center; padding: 60px 20px; color: var(--text2); font-size: 14px; }
-  .success {
-    text-align: center; padding: 60px 24px;
-  }
-  .success .icon { font-size: 48px; margin-bottom: 12px; }
-  .success .title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
-  .success .detail { font-size: 13px; color: var(--text2); line-height: 1.7; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,"Noto Sans TC",sans-serif;font-size:16px}
+  .topbar{background:var(--card);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+  .topbar .title{font-weight:700}
+  .tabs{display:flex;gap:4px;background:var(--card);border-bottom:1px solid var(--border);padding:0 8px;overflow-x:auto}
+  .tabs button{background:none;border:none;color:var(--text2);padding:10px 14px;font-size:15px;border-bottom:2px solid transparent;white-space:nowrap}
+  .tabs button.on{color:var(--green);border-bottom-color:var(--green);font-weight:700}
+  .wrap{padding:14px;max-width:900px;margin:0 auto}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+  .card{overflow-x:auto}
+  .card table{min-width:100%}
+  table{width:100%;border-collapse:collapse;font-size:15px}
+  th{color:var(--text2);text-align:left;font-weight:500;padding:6px 8px;border-bottom:1px solid var(--border)}
+  td{padding:7px 8px;border-bottom:1px solid #2a2d30}
+  tr:last-child td{border-bottom:none}
+  input,select{background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-size:15px}
+  input[type=date]{color-scheme:dark}
+  button.btn{background:var(--green-d);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:15px;font-weight:600}
+  button.btn2{background:none;color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:14px}
+  button.danger{background:none;color:var(--red);border:none;font-size:14px}
+  .mono{font-family:monospace}
+  .green{color:var(--green)} .amber{color:var(--amber)} .red{color:var(--red)} .dim{color:var(--text3)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .login{max-width:320px;margin:120px auto;text-align:center}
+  .login input{width:100%;margin:12px 0;padding:10px}
+  .login button{width:100%;padding:10px}
+  .badge{font-size:13px;padding:2px 8px;border-radius:99px;border:1px solid;display:inline-flex;align-items:center;gap:4px}
+  .b-green{color:var(--green);border-color:var(--green)}
+  .b-red{color:var(--red);border-color:var(--red)}
+  .b-amber{color:var(--amber);border-color:var(--amber)}
+  .b-dim{color:var(--text2);border-color:var(--border)}
+  .oitem{font-size:14px;color:var(--text2);display:flex;justify-content:space-between;padding:2px 0}
+  input[readonly]{border-color:transparent;background:transparent;cursor:default}
+  .lockbtn{border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:14px;background:none}
+  .lockbtn.on{background:var(--amber);border-color:var(--amber);color:#17181a;font-weight:700}
+  .utag{display:inline-block;font-size:14px;font-weight:700;padding:1px 8px;border-radius:6px;margin-right:6px}
+  .utag.bag{background:rgba(59,130,246,.18);color:#7eb3ff}
+  .utag.cup{background:rgba(249,115,22,.18);color:#ffb27d}
+  .utag.other{background:rgba(154,157,156,.15);color:var(--text2)}
+  .badge .x{cursor:pointer;font-weight:700}
+  details summary{cursor:pointer;color:var(--text2);font-size:14px;padding:4px 0}
+  .storeline{font-size:14px;color:var(--text2);padding:2px 0 2px 12px}
 </style>
 </head>
 <body>
-<div id="app"><div class="center">載入中…</div></div>
-
+<div id="app"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ====== 設定 ======
-const LIFF_ID = "2010732511-OcnAZuRv";
-const API_URL = "https://whwhufkehoxgrrwacqjv.supabase.co/functions/v1/liff-api";
+const API = "https://whwhufkehoxgrrwacqjv.supabase.co/functions/v1/admin-api";
+const ROUTE_CODES = ["A","B","C","D","E","F","G","H","I","J","K","Z","T"];
+const DAY_GROUPS = ["一四","二五","三六"];
 
-// ====== 狀態 ======
-let store = null;
-let products = [];
-let cart = {};        // productId -> qty
-let deliveryDate = "";
-let groupId = "";
-let editOrderId = ""; // 有值=編輯既有訂單模式
-let viewOrders = false; // true=歷史訂單查詢模式
-let deliveryWeekdays = null; // 該店配送星期[1,4]之類
-let history = null;
+let KEY = sessionStorage.getItem("adminKey") || "";
+let locked = true; // 預設唯讀,避免誤觸修改
+let tab = "orders";
+let stores = [], products = [], orders = [], summary = [], drivers = [], customPrices = {};
+let selStore = "", orderDate = tomorrowTW();
 
 const app = document.getElementById("app");
 
-function weekdayName(dateStr) {
-  return new Intl.DateTimeFormat("zh-TW", { timeZone: "Asia/Taipei", weekday: "short" })
-    .format(new Date(dateStr + "T12:00:00+08:00"));
+function tomorrowTW(){
+  return new Date(Date.now()+86400000).toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"});
 }
-function isOffDay(dateStr) {
-  if (!deliveryWeekdays || !dateStr) return false;
-  const wd = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Taipei", weekday: "short" })
-    .format(new Date(dateStr + "T12:00:00+08:00"));
-  const map = { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 };
-  return !deliveryWeekdays.includes(map[wd]);
-}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 
-function esc(s) {
-  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
-}
-
-function cartTotal() {
-  let t = 0;
-  for (const p of products) {
-    const q = cart[p.id] || 0;
-    t += q * p.price;
-  }
-  return t;
-}
-function cartCount() {
-  return Object.values(cart).filter(q => q > 0).length;
-}
-
-function renderHistory() {
-  const statusBadge = (o) => {
-    if (o.status === "cancelled") return '<span style="color:var(--red);font-size:13px;border:1px solid var(--red);border-radius:99px;padding:1px 8px">已取消</span>';
-    if (o.status === "delivered") return '<span style="color:#60a5fa;font-size:13px;border:1px solid #60a5fa;border-radius:99px;padding:1px 8px">已送達</span>';
-    return '<span style="color:var(--green);font-size:13px;border:1px solid var(--green);border-radius:99px;padding:1px 8px">已成立</span>';
-  };
-  app.innerHTML = `
-    <div class="header">
-      <div class="code">[${esc(store.code)}]</div>
-      <div class="name">${esc(store.name)} <span style="color:var(--text2);font-size:15px">訂單查詢</span></div>
-    </div>
-    <div class="section">
-      <div style="background:var(--card);border:1px solid var(--green-dark);border-radius:12px;padding:14px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <span style="color:var(--text2)">本月累計(${history.monthLabel},已配送)</span>
-          <b style="font-size:22px;color:var(--green)">$${history.monthTotal.toLocaleString()}</b>
-        </div>
-        ${history.pendingTotal>0?`
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
-          <span style="color:var(--text2)">未配送訂單</span>
-          <b style="font-size:17px;color:var(--amber)">$${history.pendingTotal.toLocaleString()}</b>
-        </div>`:""}
-      </div>
-      <div style="color:var(--text3);font-size:13px;margin:6px 2px 0">顯示最近30天訂單,依配送日排序</div>
-    </div>
-    <div class="section" style="padding-top:0">
-      ${history.orders.length===0?'<div style="color:var(--text3);text-align:center;padding:40px 0">最近30天沒有訂單</div>':""}
-      ${history.orders.map(o=>{
-        const [, mm, dd] = o.deliveryDate.split("-");
-        return `
-        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;${o.status==='cancelled'?'opacity:.5':''}">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <b>配送 ${mm}/${dd}</b>
-            ${statusBadge(o)}
-          </div>
-          <div style="margin-top:8px">
-            ${o.items.map(it=>`<div style="display:flex;justify-content:space-between;font-size:15px;color:var(--text2);padding:2px 0"><span>${esc(it.name)}</span><span style="font-family:monospace">${it.qty} × $${it.price}</span></div>`).join("")}
-          </div>
-          <div style="text-align:right;font-weight:700;margin-top:6px;font-size:17px">$${o.total.toLocaleString()}</div>
-        </div>`}).join("")}
-    </div>`;
-}
-
-function render() {
-  const total = cartTotal();
-  app.innerHTML = `
-    <div class="header">
-      <div class="code">[${esc(store.code)}]</div>
-      <div class="name">${esc(store.name)}${editOrderId?' <span style="color:var(--amber);font-size:15px">(修改今日訂單)</span>':""}</div>
-    </div>
-    ${editOrderId?`
-    <div class="section" style="padding-bottom:0">
-      <div style="background:rgba(245,158,11,.12);border:1px solid var(--amber);color:var(--amber);
-                  border-radius:10px;padding:10px 12px;font-size:15px">
-        📝 這天已經有訂單了,以下為目前的訂購內容,直接修改即可(數量改0=取消該品項)
-      </div>
-    </div>`:""}
-    <div class="section">
-      <div class="date-row">
-        <label>配送日期${editOrderId?'(修改中不可改)':''}</label>
-        <input type="date" id="ddate" value="${deliveryDate}" ${editOrderId?'disabled':''} />
-      </div>
-      ${(!editOrderId && isOffDay(deliveryDate)) ? `
-        <div style="background:rgba(245,158,11,.12);border:1px solid var(--amber);color:var(--amber);
-                    border-radius:10px;padding:10px 12px;margin-top:8px;font-size:15px">
-          ⚠️ ${deliveryDate.slice(5).replace("-","/")}(${weekdayName(deliveryDate)})不是貴店的固定配送日<br/>
-          <span style="font-size:14px">固定配送:${store.dayGroup||"未設定"};如需此日配送請與我們確認</span>
-        </div>` : ""}
-    </div>
-    <div class="section" style="padding-top:0">
-      ${products.map(p => `
-        <div class="product ${p.unit.includes('袋')?'bag':p.unit.includes('杯')?'cup':''}">
-          <div>
-            <div class="pname">${esc(p.name)}</div>
-            <div class="pinfo"><span class="utag ${p.unit.includes('袋')?'bag':p.unit.includes('杯')?'cup':'other'}">${esc(p.unit)}</span> $${p.price}${p.isCustom ? ' <span class="custom">(專屬價)</span>' : ""}</div>
-          </div>
-          <div class="qty">
-            <button onclick="chg('${p.id}',-1)">−</button>
-            <input class="num" type="number" inputmode="numeric" min="0" value="${cart[p.id] || 0}"
-              onchange="setQty('${p.id}',this.value)" onfocus="this.select()" />
-            <button class="plus" onclick="chg('${p.id}',1)">＋</button>
-          </div>
-        </div>
-      `).join("")}
-    </div>
-    <div class="footer">
-      <button class="submit" id="submitBtn" ${cartCount() === 0 ? "disabled" : ""} onclick="submitOrder()">
-        ${cartCount() === 0 ? "請選擇品項" : editOrderId ? `更新訂單 · $${total}` : `送出訂單 · $${total}`}
-      </button>
-    </div>
-  `;
-  document.getElementById("ddate").addEventListener("change", (e) => {
-    deliveryDate = e.target.value;
-    render(); // 重新繪製以更新非配送日提醒
+async function api(action, opts={}){
+  const url = new URL(API);
+  url.searchParams.set("action", action);
+  for (const [k,v] of Object.entries(opts.params||{})) url.searchParams.set(k,v);
+  const res = await fetch(url, {
+    method: opts.body ? "POST":"GET",
+    headers: {"x-admin-key":KEY, ...(opts.body?{"Content-Type":"application/json"}:{})},
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
+  const data = await res.json();
+  if (res.status===401){ KEY=""; sessionStorage.removeItem("adminKey"); renderLogin("密碼錯誤"); throw new Error("unauthorized"); }
+  if (!res.ok) throw new Error(data.error||"error");
+  return data;
 }
 
-window.chg = function (pid, d) {
-  cart[pid] = Math.max(0, (cart[pid] || 0) + d);
-  render();
-};
-
-window.setQty = function (pid, v) {
-  cart[pid] = Math.max(0, Math.floor(Number(v) || 0));
-  render();
-};
-
-window.submitOrder = async function () {
-  const btn = document.getElementById("submitBtn");
-  btn.disabled = true;
-  btn.textContent = "送出中…";
-
-  const items = Object.entries(cart)
-    .filter(([, q]) => q > 0)
-    .map(([productId, quantity]) => ({ productId, quantity }));
-
+// ====== 登入 ======
+function renderLogin(msg){
+  app.innerHTML = `
+    <div class="login">
+      <h2>🥛 訂貨系統</h2>
+      ${msg?`<div class="red" style="margin-top:8px">${esc(msg)}</div>`:""}
+      <input type="password" id="pw" placeholder="管理密碼" />
+      <button class="btn" onclick="doLogin()">登入</button>
+    </div>`;
+  document.getElementById("pw").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin()});
+}
+window.doLogin = async function(){
+  KEY = document.getElementById("pw").value.trim();
   try {
-    const res = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ groupId, deliveryDate, items, ...(editOrderId?{orderId:editOrderId}:{}) }),
-    });
-    const data = await res.json();
-    if (!res.ok || !data.ok) throw new Error(data.error || "下單失敗");
+    await api("products");
+    sessionStorage.setItem("adminKey", KEY);
+    boot();
+  } catch(e){}
+};
 
-    const [, mm, dd] = deliveryDate.split("-");
-    app.innerHTML = `
-      <div class="success">
-        <div class="icon">✅</div>
-        <div class="title">${editOrderId?'訂單已更新':'訂單已送出'}</div>
-        <div class="detail">
-          配送日 ${mm}/${dd}<br/>
-          合計 $${data.total}<br/><br/>
-          可直接關閉此頁面(輸入「訂單」可隨時查詢)
+// ====== 主畫面 ======
+async function boot(){ render(); await loadTab(); }
+
+function render(){
+  app.innerHTML = `
+    <div class="topbar"><span class="title">🥛 訂貨系統</span>
+      <span style="display:flex;gap:8px;align-items:center">
+        <button class="lockbtn ${locked?'':'on'}" onclick="toggleLock()">${locked?'🔒 唯讀':'✏️ 編輯中'}</button>
+        <button class="btn2" onclick="logout()">登出</button>
+      </span></div>
+    <div class="tabs">
+      ${[["orders","訂單"],["summary","品項統計"],["stores","店家"],["products","商品"],["prices","客製價"],["drivers","司機"],["routes","路線"]].map(([k,l])=>
+        `<button class="${tab===k?"on":""}" onclick="switchTab('${k}')">${l}</button>`).join("")}
+    </div>
+    <div class="wrap" id="content"><div class="dim">載入中…</div></div>`;
+}
+window.logout = ()=>{ KEY=""; sessionStorage.removeItem("adminKey"); renderLogin(); };
+window.toggleLock = ()=>{
+  locked = !locked;
+  if (!locked) setTimeout(()=>{ if(!locked) { locked=true; render(); loadTab(); } }, 180000); // 3分鐘後自動上鎖
+  render(); loadTab();
+};
+window.switchTab = (k)=>{ tab=k; render(); loadTab(); };
+
+async function loadTab(){
+  const c = document.getElementById("content");
+  try {
+    // ============ 訂單 ============
+    if (tab==="orders"){
+      orders = await api("orders",{params:{date:orderDate}});
+      c.innerHTML = `
+        <div class="row">
+          <label class="dim">配送日</label>
+          <input type="date" value="${orderDate}" onchange="chgDate(this.value)" />
+          <button class="btn2" onclick="chgDate('')">全部日期</button>
+          <span class="dim">共 ${orders.length} 筆</span>
+          <button class="btn2" onclick="exportOrders()">📥 匯出Excel</button>
+        </div>
+        ${orders.length===0?'<div class="card dim">此日期尚無訂單</div>':""}
+        ${orders.map(o=>`
+          <div class="card" style="${o.status==='cancelled'?'opacity:.45':''}">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <span class="mono green">${esc(o.stores.store_code)}</span>
+                <b> ${esc(o.stores.name)}</b>
+                ${o.source==='on_site'?'<span class="badge b-amber">現場建單</span>':""}
+                ${o.status==='cancelled'?'<span class="badge b-red">已刪除</span>':""}
+                <div class="dim" style="font-size:14px;margin-top:2px">配送 ${o.delivery_date} · 下單 ${o.order_date}</div>
+              </div>
+              ${o.status!=='cancelled'?`<span style="white-space:nowrap"><button class="btn2" onclick="editOrder('${o.id}')">編輯</button> <button class="danger" onclick="cancelOrder('${o.id}')">刪除</button></span>`:""}
+            </div>
+            <div style="margin-top:8px">
+              ${(o.order_items||[]).map(it=>`<div class="oitem"><span>${esc(it.products.name)}</span><span class="mono dim">${it.quantity} × $${it.unit_price}</span></div>`).join("")}
+            </div>
+            <div style="text-align:right;font-weight:700;margin-top:6px">$${Number(o.total_amount).toLocaleString()}</div>
+          </div>`).join("")}`;
+    }
+
+    // ============ 品項統計 ============
+    if (tab==="summary"){
+      summary = await api("summary",{params:{date:orderDate}});
+      c.innerHTML = `
+        <div class="row"><label class="dim">配送日</label>
+          <input type="date" value="${orderDate}" onchange="chgDate(this.value)" /></div>
+        <div class="card">
+          <table><tr><th>品項</th><th style="text-align:right">總數量</th><th style="text-align:right">下單店數</th></tr>
+          ${summary.length===0?'<tr><td colspan="3" class="dim">此日期尚無訂單</td></tr>':""}
+          ${summary.map(s=>`<tr><td>${esc(s.name)}</td><td style="text-align:right" class="mono green"><b>${s.qty}</b> <span class="dim">${esc(s.unit)}</span></td><td style="text-align:right" class="mono dim">${s.storeCount}</td></tr>`).join("")}
+          </table>
+        </div>`;
+    }
+
+    // ============ 店家 ============
+    if (tab==="stores"){
+      stores = await api("stores");
+      c.innerHTML = `
+        <div class="card">
+          <b>新增店家</b>
+          <div class="row" style="margin-top:8px">
+            <input id="ns_code" placeholder="店號 如A-001" style="width:110px"/>
+            <input id="ns_name" placeholder="店名" style="width:130px"/>
+            <input id="ns_addr" placeholder="地址" style="width:180px"/>
+            <select id="ns_route" style="width:70px"><option value="">路線</option>${ROUTE_CODES.map(r=>`<option>${r}</option>`).join("")}</select>
+            <select id="ns_dg" style="width:80px"><option value="">梯次</option>${DAY_GROUPS.map(d=>`<option>${d}</option>`).join("")}</select>
+            <button class="btn" onclick="createStore()">新增</button>
+          </div>
+        </div>
+        <div class="card"><table>
+          <tr><th>店號</th><th>店名</th><th>路線/梯次</th><th>LINE綁定</th><th>狀態</th><th style="text-align:right"></th></tr>
+          ${stores.map(s=>`<tr>
+            <td class="mono green">${esc(s.store_code)}</td>
+            <td>
+              <input value="${esc(s.name)}" ${locked?"readonly":""} style="width:130px;font-size:15px" onchange="updStoreField('${s.id}','name',this.value)"/>
+              <div style="margin-top:3px"><input value="${esc(s.address||"")}" ${locked?"readonly":""} placeholder="地址" style="width:170px;font-size:13px" onchange="updStoreField('${s.id}','address',this.value)"/></div>
+            </td>
+            <td class="dim">${esc(s.route_code||"-")} · ${esc(s.day_group||"-")}</td>
+            <td>${s.line_group_id?'<span class="green">已綁定</span>':'<span class="dim">未綁定</span>'}</td>
+            <td>${s.status==='active'?'<span class="badge b-green">使用中</span>':'<span class="badge b-red">停用</span>'}</td>
+            <td style="text-align:right;white-space:nowrap">
+              <button class="btn2" onclick="toggleStore('${s.id}','${s.status}')">${s.status==='active'?'停用':'啟用'}</button>
+              ${locked?"":`<button class="danger" onclick="deleteStore('${s.id}','${esc(s.name)}')">刪除</button>`}
+            </td>
+          </tr>`).join("")}
+        </table></div>
+        <div class="dim" style="font-size:14px">${locked?"🔒 目前為唯讀模式,點右上「唯讀」可解鎖編輯":"※ 已有訂單記錄的店家無法刪除(保護歷史帳),只能停用"}</div>`;
+    }
+
+    // ============ 商品 ============
+    if (tab==="products"){
+      products = await api("products");
+      c.innerHTML = `
+        <div class="card">
+          <b>新增商品</b>
+          <div class="row" style="margin-top:8px">
+            <input id="np_name" placeholder="商品名稱" style="width:150px"/>
+            <input id="np_unit" placeholder="單位" style="width:90px"/>
+            <input id="np_price" placeholder="基礎價" type="number" style="width:90px"/>
+            <button class="btn" onclick="createProduct()">新增</button>
+          </div>
+        </div>
+        ${products.map((p,i)=>`
+          <div class="card" style="padding:10px 12px">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              ${locked?"":`<span style="display:inline-flex;gap:4px">
+                <button class="btn2" style="padding:4px 9px" ${i===0?"disabled":""} onclick="moveProduct(${i},-1)">↑</button>
+                <button class="btn2" style="padding:4px 9px" ${i===products.length-1?"disabled":""} onclick="moveProduct(${i},1)">↓</button>
+              </span>`}
+              <input value="${esc(p.name)}" ${locked?"readonly":""} style="flex:2;min-width:110px" onchange="updProductField('${p.id}','name',this.value)"/>
+              <input value="${esc(p.unit)}" ${locked?"readonly":""} style="width:64px" onchange="updProductField('${p.id}','unit',this.value)"/>
+              <input type="number" value="${p.base_price}" ${locked?"readonly":""} style="width:76px;text-align:right" onchange="updPrice('${p.id}',this.value)"/>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+              <span>${p.is_active?'<span class="badge b-green">上架</span>':'<span class="badge b-red">下架</span>'}</span>
+              <span>
+                <button class="btn2" onclick="toggleProduct('${p.id}',${p.is_active})">${p.is_active?'下架':'上架'}</button>
+                ${locked?"":`<button class="danger" onclick="deleteProduct('${p.id}','${esc(p.name)}')">刪除</button>`}
+              </span>
+            </div>
+          </div>`).join("")}
+        <div class="dim" style="font-size:14px">${locked?"🔒 目前為唯讀模式,點右上「唯讀」可解鎖編輯":"※ 已有訂單記錄的商品無法刪除(保護歷史帳),只能下架"}</div>`;
+    }
+
+    // ============ 客製價 ============
+    if (tab==="prices"){
+      stores = await api("stores");
+      products = await api("products");
+      if (!selStore && stores.length) selStore = stores[0].id;
+      const cp = selStore ? await api("custom_prices",{params:{storeId:selStore}}) : [];
+      customPrices = Object.fromEntries(cp.map(c=>[c.product_id, c.custom_price]));
+      c.innerHTML = `
+        <div class="row">
+          <label class="dim">選擇店家</label>
+          <select onchange="chgStore(this.value)">
+            ${stores.map(s=>`<option value="${s.id}" ${s.id===selStore?"selected":""}>[${esc(s.store_code)}] ${esc(s.name)}</option>`).join("")}
+          </select>
+        </div>
+        <div class="card"><table>
+          <tr><th>商品</th><th style="text-align:right">基礎價</th><th style="text-align:right">此店價格(留空=用基礎價)</th><th></th></tr>
+          ${products.filter(p=>p.is_active).map(p=>{
+            const has = customPrices[p.id]!=null;
+            const ucls = p.unit.includes('袋')?'bag':p.unit.includes('杯')?'cup':'other';
+            return `<tr>
+              <td style="font-size:17px"><span class="utag ${ucls}">${esc(p.unit)}</span>${esc(p.name)}</td>
+              <td style="text-align:right;font-size:17px" class="dim mono">$${p.base_price}</td>
+              <td style="text-align:right"><input type="number" id="cp_${p.id}" value="${has?customPrices[p.id]:""}" placeholder="${p.base_price}" style="width:96px;text-align:right;font-size:17px;${has?'border-color:var(--amber);color:var(--amber)':''}"/></td>
+              <td><button class="btn2" onclick="saveCP('${p.id}')">儲存</button></td>
+            </tr>`}).join("")}
+        </table></div>`;
+    }
+
+    // ============ 司機 ============
+    if (tab==="drivers"){
+      drivers = await api("drivers");
+      c.innerHTML = `
+        <div class="card">
+          <b>新增司機</b>
+          <div class="row" style="margin-top:8px">
+            <input id="nd_name" placeholder="姓名" style="width:90px"/>
+            <input id="nd_car" placeholder="車號" style="width:100px"/>
+            <input id="nd_phone" placeholder="電話" style="width:120px"/>
+            <input id="nd_acc" placeholder="登入帳號" style="width:110px"/>
+            <input id="nd_pw" placeholder="登入密碼" type="password" style="width:110px"/>
+            <button class="btn" onclick="createDriver()">新增</button>
+          </div>
+        </div>
+        ${drivers.length===0?'<div class="card dim">尚無司機</div>':""}
+        ${drivers.map(d=>`
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+              <div>
+                <b>${esc(d.name)}</b>
+                <span class="dim mono" style="margin-left:8px">🚚 ${esc(d.car_no||"-")}</span>
+                <span class="dim mono" style="margin-left:8px">${esc(d.account)}</span>
+                ${d.status==='active'?'<span class="badge b-green">在職</span>':'<span class="badge b-red">停用</span>'}
+              </div>
+              <div style="white-space:nowrap">
+                <button class="btn2" onclick="resetDriverPw('${d.id}','${esc(d.name)}')">重設密碼</button>
+                <button class="btn2" onclick="toggleDriver('${d.id}','${d.status}')">${d.status==='active'?'停用':'啟用'}</button>
+                <button class="danger" onclick="deleteDriver('${d.id}','${esc(d.name)}')">刪除</button>
+              </div>
+            </div>
+            <div style="margin-top:10px;padding-top:10px;border-top:1px solid #2a2d30">
+              <span class="dim" style="font-size:14px">負責路線:</span>
+              ${(d.routes||[]).map(r=>`
+                <span class="badge ${r.day_group?'b-amber':'b-green'}" style="margin:2px">
+                  ${esc(r.route_code)}${r.day_group?` · ${esc(r.day_group)}(代班)`:'(全包)'}
+                  <span class="x" onclick="delDriverRoute('${r.id}')">✕</span>
+                </span>`).join("") || '<span class="dim" style="font-size:14px">尚未指派</span>'}
+              <div class="row" style="margin-top:8px;margin-bottom:0">
+                <select id="dr_route_${d.id}" style="width:80px">
+                  <option value="">路線</option>${ROUTE_CODES.map(r=>`<option>${r}</option>`).join("")}
+                </select>
+                <select id="dr_dg_${d.id}" style="width:130px">
+                  <option value="">全包(不分梯次)</option>
+                  ${DAY_GROUPS.map(dg=>`<option>${dg}</option>`).join("")}
+                </select>
+                <button class="btn2" onclick="addDriverRoute('${d.id}')">加入路線</button>
+              </div>
+            </div>
+          </div>`).join("")}`;
+    }
+
+    // ============ 路線 ============
+    if (tab==="routes"){
+      const data = await api("routes_overview");
+      window.routesData = data;
+      const routeKeys = Object.keys(data.routes).sort();
+      c.innerHTML = `
+        ${routeKeys.length===0?'<div class="card dim">尚無店家路線資料</div>':""}
+        ${routeKeys.map(rc=>{
+          const groups = data.routes[rc];
+          const totalStores = Object.values(groups).reduce((s,arr)=>s+arr.length,0);
+          const driversOnRoute = data.driverRoutes.filter(dr=>dr.route_code===rc);
+          return `
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <div>
+                <span class="badge b-green" style="font-size:16px;font-weight:700">路線 ${esc(rc)}</span>
+                <span class="dim" style="margin-left:8px">共 ${totalStores} 間店家</span>
+              </div>
+              <div class="dim" style="font-size:14px">
+                ${driversOnRoute.map(dr=>`🚚 ${esc(dr.drivers?.name||"?")}${dr.day_group?`(${esc(dr.day_group)})`:""}`).join(" · ")||"未指派司機"}
+              </div>
+            </div>
+            ${Object.keys(groups).sort().map(dg=>`
+              <details>
+                <summary>梯次 ${esc(dg)} — ${groups[dg].length} 間店家(在序號框輸入數字即插入該位置,其餘自動順移)</summary>
+                ${groups[dg].map((s,i)=>`<div class="storeline" style="display:flex;align-items:center;gap:8px">
+                  <input type="number" inputmode="numeric" min="1" max="${groups[dg].length}" value="${i+1}"
+                    ${locked?"readonly":""} style="width:52px;text-align:center"
+                    onchange="setRouteStorePos('${esc(rc)}','${esc(dg)}',${i},this.value)" onfocus="this.select()"/>
+                  <span class="mono green">${esc(s.code)}</span> ${esc(s.name)} ${s.status!=='active'?'<span class="red">(停用)</span>':""}
+                </div>`).join("")}
+              </details>`).join("")}
+          </div>`}).join("")}
+        <div class="dim" style="font-size:14px">※ 店家的路線/梯次在「店家」分頁設定;司機的路線指派在「司機」分頁設定</div>`;
+    }
+  } catch(e){
+    if (String(e.message)!=="unauthorized") c.innerHTML = `<div class="card red">載入失敗:${esc(e.message)}</div>`;
+  }
+}
+
+// ====== 操作 ======
+window.chgDate = (v)=>{ orderDate=v; loadTab(); };
+window.chgStore = (v)=>{ selStore=v; loadTab(); };
+
+window.createStore = async ()=>{
+  const g = id=>document.getElementById(id).value.trim();
+  try{
+    await api("create_store",{body:{store_code:g("ns_code"),name:g("ns_name"),address:g("ns_addr"),route_code:g("ns_route"),day_group:g("ns_dg")}});
+    loadTab();
+  }catch(e){alert(e.message)}
+};
+window.updStoreField = async (id,field,v)=>{
+  const val = v.trim();
+  if (field==='name' && !val) return alert("店名不可為空白");
+  try { await api("update_store",{body:{id,[field]:val}}); }
+  catch(e){ alert("儲存失敗:"+e.message); loadTab(); }
+};
+window.toggleStore = async (id,status)=>{
+  await api("update_store",{body:{id,status:status==='active'?'suspended':'active'}}); loadTab();
+};
+window.deleteStore = async (id,name)=>{
+  if (!confirm(`確定要永久刪除店家「${name}」?此動作無法復原`)) return;
+  try{ await api("delete_store",{body:{id}}); loadTab(); }catch(e){alert(e.message)}
+};
+window.createProduct = async ()=>{
+  const g = id=>document.getElementById(id).value.trim();
+  try{
+    await api("create_product",{body:{name:g("np_name"),unit:g("np_unit"),base_price:g("np_price")}});
+    loadTab();
+  }catch(e){alert(e.message)}
+};
+window.updPrice = async (id,v)=>{ await api("update_product",{body:{id,base_price:v}}); };
+window.updProductField = async (id,field,v)=>{
+  if (!v.trim()) return alert("不可為空白");
+  await api("update_product",{body:{id,[field]:v.trim()}});
+};
+window.moveProduct = async (index,dir)=>{
+  const j = index + dir;
+  if (j < 0 || j >= products.length) return;
+  [products[index], products[j]] = [products[j], products[index]];
+  try {
+    await api("reorder_products",{body:{ids:products.map(p=>p.id)}});
+    loadTab();
+  } catch(e){ alert("排序失敗:"+e.message); loadTab(); }
+};
+window.toggleProduct = async (id,active)=>{
+  await api("update_product",{body:{id,is_active:!active}}); loadTab();
+};
+window.deleteProduct = async (id,name)=>{
+  if (!confirm(`確定要永久刪除商品「${name}」?此動作無法復原`)) return;
+  try{ await api("delete_product",{body:{id}}); loadTab(); }catch(e){alert(e.message)}
+};
+window.saveCP = async (pid)=>{
+  const v = document.getElementById("cp_"+pid).value.trim();
+  await api("set_custom_price",{body:{storeId:selStore,productId:pid,price:v}});
+  loadTab();
+};
+window.cancelOrder = async (id)=>{
+  const reason = prompt("刪除原因(將記錄於異動log):");
+  if (reason===null) return;
+  await api("cancel_order",{body:{orderId:id,reason}}); loadTab();
+};
+
+let editState = null; // {orderId, cart:{productId:qty}, priceList, storeName}
+
+window.editOrder = async (orderId)=>{
+  try {
+    const d = await api("order_detail",{params:{orderId}});
+    const cart = {};
+    (d.order.order_items||[]).forEach(it=>{ cart[it.product_id]=Number(it.quantity); });
+    editState = { orderId, cart, priceList:d.priceList,
+      storeName:`[${d.order.stores.store_code}] ${d.order.stores.name}`,
+      deliveryDate:d.order.delivery_date };
+    renderEditModal();
+  } catch(e){ alert("載入失敗:"+e.message); }
+};
+
+function renderEditModal(){
+  const es = editState;
+  let total = 0;
+  for (const p of es.priceList){ total += (es.cart[p.id]||0)*p.price; }
+  const html = `
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeEdit()">
+      <div style="background:var(--card);width:100%;max-width:520px;max-height:88vh;border-radius:16px 16px 0 0;display:flex;flex-direction:column">
+        <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+          <b>編輯訂單</b>
+          <div class="dim" style="font-size:14px;margin-top:2px">${esc(es.storeName)} · 配送 ${es.deliveryDate}</div>
+        </div>
+        <div style="overflow-y:auto;padding:8px 16px;flex:1">
+          ${es.priceList.map(p=>{
+            const q = es.cart[p.id]||0;
+            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #2a2d30">
+              <div><div>${esc(p.name)}</div><div class="dim" style="font-size:14px">${esc(p.unit)} · $${p.price}</div></div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <button class="btn2" style="width:34px;height:34px;border-radius:50%" onclick="editQty('${p.id}',-1)">−</button>
+                <input type="number" inputmode="numeric" min="0" value="${q}" style="width:56px;height:34px;text-align:center"
+                  onchange="editSetQty('${p.id}',this.value)" onfocus="this.select()"/>
+                <button class="btn" style="width:34px;height:34px;border-radius:50%;padding:0" onclick="editQty('${p.id}',1)">＋</button>
+              </div>
+            </div>`}).join("")}
+        </div>
+        <div style="padding:14px 16px;border-top:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+            <span class="dim">訂單總額</span><b style="font-size:18px">$${total.toLocaleString()}</b>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn2" style="flex:1" onclick="closeEdit()">取消</button>
+            <button class="btn" style="flex:2" onclick="saveEdit()">儲存變更</button>
+          </div>
         </div>
       </div>
-    `;
-    // 3秒後自動關閉LIFF視窗
-    setTimeout(() => { if (liff.isInClient()) liff.closeWindow(); }, 3000);
-  } catch (e) {
-    alert("下單失敗:" + e.message);
-    btn.disabled = false;
-    btn.textContent = "送出訂單";
+    </div>`;
+  let modal = document.getElementById("editModal");
+  if (!modal){ modal=document.createElement("div"); modal.id="editModal"; document.body.appendChild(modal); }
+  modal.innerHTML = html;
+}
+
+window.editQty = (pid,d)=>{ editState.cart[pid]=Math.max(0,(editState.cart[pid]||0)+d); renderEditModal(); };
+window.editSetQty = (pid,v)=>{ editState.cart[pid]=Math.max(0,Math.floor(Number(v)||0)); renderEditModal(); };
+window.closeEdit = ()=>{ const m=document.getElementById("editModal"); if(m)m.innerHTML=""; editState=null; };
+window.saveEdit = async ()=>{
+  const reason = prompt("修改原因(將記錄於異動log):");
+  if (reason===null) return;
+  const items = Object.entries(editState.cart).map(([productId,quantity])=>({productId,quantity}));
+  try {
+    await api("update_order_items",{body:{orderId:editState.orderId,items,reason}});
+    closeEdit();
+    loadTab();
+  } catch(e){ alert("儲存失敗:"+e.message); }
+};
+
+window.exportOrders = ()=>{
+  if (!orders.length) return alert("目前沒有資料可匯出");
+  const rows = [["店號","店名","配送日","下單日","狀態","來源","商品","數量","單價","小計","訂單總額"]];
+  for (const o of orders){
+    const items = o.order_items||[];
+    if (items.length===0){
+      rows.push([o.stores.store_code,o.stores.name,o.delivery_date,o.order_date,
+        o.status==='cancelled'?'已刪除':'正常',o.source==='on_site'?'現場建單':'店家下單',
+        '','','','',o.total_amount]);
+    } else {
+      items.forEach((it,i)=>{
+        rows.push([
+          i===0?o.stores.store_code:'', i===0?o.stores.name:'',
+          i===0?o.delivery_date:'', i===0?o.order_date:'',
+          i===0?(o.status==='cancelled'?'已刪除':'正常'):'',
+          i===0?(o.source==='on_site'?'現場建單':'店家下單'):'',
+          it.products.name, it.quantity, it.unit_price, it.quantity*it.unit_price,
+          i===0?o.total_amount:'',
+        ]);
+      });
+    }
   }
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:10},{wch:14},{wch:11},{wch:11},{wch:8},{wch:10},{wch:14},{wch:6},{wch:8},{wch:8},{wch:10}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "訂單");
+  const label = orderDate || "全部日期";
+  XLSX.writeFile(wb, `訂單匯出_${label}.xlsx`);
+};
+
+// ---- 司機操作 ----
+window.createDriver = async ()=>{
+  const g = id=>document.getElementById(id).value.trim();
+  try{
+    await api("create_driver",{body:{name:g("nd_name"),car_no:g("nd_car"),phone:g("nd_phone"),account:g("nd_acc"),password:g("nd_pw")}});
+    loadTab();
+  }catch(e){alert(e.message)}
+};
+window.toggleDriver = async (id,status)=>{
+  await api("update_driver",{body:{id,status:status==='active'?'inactive':'active'}}); loadTab();
+};
+window.deleteDriver = async (id,name)=>{
+  if (!confirm(`確定要刪除司機「${name}」?其路線指派也會一併移除`)) return;
+  try{ await api("delete_driver",{body:{id}}); loadTab(); }catch(e){alert(e.message)}
+};
+window.resetDriverPw = async (id,name)=>{
+  const pw = prompt(`輸入「${name}」的新密碼:`);
+  if (!pw) return;
+  await api("update_driver",{body:{id,password:pw}});
+  alert("密碼已更新");
+};
+window.addDriverRoute = async (driverId)=>{
+  const rc = document.getElementById("dr_route_"+driverId).value;
+  const dg = document.getElementById("dr_dg_"+driverId).value;
+  if (!rc) return alert("請選擇路線");
+  try{ await api("add_driver_route",{body:{driverId,route_code:rc,day_group:dg||null}}); loadTab(); }catch(e){alert(e.message)}
+};
+window.delDriverRoute = async (id)=>{
+  await api("delete_driver_route",{body:{id}}); loadTab();
+};
+window.setRouteStorePos = async (rc,dg,i,val)=>{
+  const arr = window.routesData.routes[rc][dg];
+  let pos = Math.floor(Number(val)) - 1; // 目標位置(0-based)
+  if (!Number.isFinite(pos)) { loadTab(); return; }
+  pos = Math.max(0, Math.min(arr.length - 1, pos));
+  if (pos === i) { loadTab(); return; }
+  const [moved] = arr.splice(i, 1); // 取出該店
+  arr.splice(pos, 0, moved);        // 插入目標位置,其餘自動順移
+  try {
+    await api("reorder_route_stores",{body:{ids:arr.map(s=>s.id)}});
+    loadTab();
+  } catch(e){ alert("排序失敗:"+e.message); loadTab(); }
 };
 
 // ====== 啟動 ======
-(async function main() {
-  try {
-    await liff.init({ liffId: LIFF_ID });
-
-    // 取得groupId:優先從liff.state/網址參數拿
-    const params = new URLSearchParams(location.search);
-    groupId = params.get("groupId") || "";
-    editOrderId = params.get("editOrder") || "";
-    viewOrders = params.get("view") === "orders";
-    if (params.get("liff.state")) {
-      const stateParams = new URLSearchParams(params.get("liff.state").replace(/^\?/, ""));
-      if (!groupId) groupId = stateParams.get("groupId") || "";
-      if (!editOrderId) editOrderId = stateParams.get("editOrder") || "";
-      if (!viewOrders) viewOrders = stateParams.get("view") === "orders";
-    }
-    if (!groupId) {
-      app.innerHTML = '<div class="center">無法取得群組資訊,請從群組內的「叫貨」按鈕開啟</div>';
-      return;
-    }
-
-    const extraParam = viewOrders ? "&view=orders"
-      : (editOrderId ? `&editOrder=${encodeURIComponent(editOrderId)}` : "");
-    const res = await fetch(`${API_URL}?groupId=${encodeURIComponent(groupId)}${extraParam}`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "載入失敗");
-
-    store = data.store;
-    deliveryWeekdays = data.deliveryWeekdays || null;
-    if (viewOrders) {
-      history = data.history;
-      renderHistory();
-      return;
-    }
-    products = data.products;
-    if (data.editOrder) {
-      // 編輯模式:帶入原訂單品項與配送日,日期鎖定不可改
-      // 關鍵:記下訂單ID,送出時才會走「更新既有訂單」而非建立新訂單
-      editOrderId = data.editOrder.id;
-      deliveryDate = data.editOrder.deliveryDate;
-      for (const it of data.editOrder.items) cart[it.productId] = it.quantity;
-    } else {
-      editOrderId = "";
-      deliveryDate = data.defaultDeliveryDate;
-    }
-    render();
-  } catch (e) {
-    app.innerHTML = `<div class="center">載入失敗:${esc(e.message)}</div>`;
-  }
-})();
+if (KEY) boot(); else renderLogin();
 </script>
 </body>
 </html>
