@@ -42,6 +42,9 @@
   .b-amber{color:var(--amber);border-color:var(--amber)}
   .b-dim{color:var(--text2);border-color:var(--border)}
   .oitem{font-size:14px;color:var(--text2);display:flex;justify-content:space-between;padding:2px 0}
+  input[readonly]{border-color:transparent;background:transparent;cursor:default}
+  .lockbtn{border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:14px;background:none}
+  .lockbtn.on{background:var(--amber);border-color:var(--amber);color:#17181a;font-weight:700}
   .utag{display:inline-block;font-size:14px;font-weight:700;padding:1px 8px;border-radius:6px;margin-right:6px}
   .utag.bag{background:rgba(59,130,246,.18);color:#7eb3ff}
   .utag.cup{background:rgba(249,115,22,.18);color:#ffb27d}
@@ -61,6 +64,7 @@ const ROUTE_CODES = ["A","B","C","D","E","F","G","H","I","J","K","Z","T"];
 const DAY_GROUPS = ["一四","二五","三六"];
 
 let KEY = sessionStorage.getItem("adminKey") || "";
+let locked = true; // 預設唯讀,避免誤觸修改
 let tab = "orders";
 let stores = [], products = [], orders = [], summary = [], drivers = [], customPrices = {};
 let selStore = "", orderDate = tomorrowTW();
@@ -113,7 +117,10 @@ async function boot(){ render(); await loadTab(); }
 function render(){
   app.innerHTML = `
     <div class="topbar"><span class="title">🥛 訂貨系統</span>
-      <button class="btn2" onclick="logout()">登出</button></div>
+      <span style="display:flex;gap:8px;align-items:center">
+        <button class="lockbtn ${locked?'':'on'}" onclick="toggleLock()">${locked?'🔒 唯讀':'✏️ 編輯中'}</button>
+        <button class="btn2" onclick="logout()">登出</button>
+      </span></div>
     <div class="tabs">
       ${[["orders","訂單"],["summary","品項統計"],["stores","店家"],["products","商品"],["prices","客製價"],["drivers","司機"],["routes","路線"]].map(([k,l])=>
         `<button class="${tab===k?"on":""}" onclick="switchTab('${k}')">${l}</button>`).join("")}
@@ -121,6 +128,11 @@ function render(){
     <div class="wrap" id="content"><div class="dim">載入中…</div></div>`;
 }
 window.logout = ()=>{ KEY=""; sessionStorage.removeItem("adminKey"); renderLogin(); };
+window.toggleLock = ()=>{
+  locked = !locked;
+  if (!locked) setTimeout(()=>{ if(!locked) { locked=true; render(); loadTab(); } }, 180000); // 3分鐘後自動上鎖
+  render(); loadTab();
+};
 window.switchTab = (k)=>{ tab=k; render(); loadTab(); };
 
 async function loadTab(){
@@ -191,19 +203,19 @@ async function loadTab(){
           ${stores.map(s=>`<tr>
             <td class="mono green">${esc(s.store_code)}</td>
             <td>
-              <input value="${esc(s.name)}" style="width:130px;font-size:15px" onchange="updStoreField('${s.id}','name',this.value)"/>
-              <div style="margin-top:3px"><input value="${esc(s.address||"")}" placeholder="地址" style="width:170px;font-size:13px" onchange="updStoreField('${s.id}','address',this.value)"/></div>
+              <input value="${esc(s.name)}" ${locked?"readonly":""} style="width:130px;font-size:15px" onchange="updStoreField('${s.id}','name',this.value)"/>
+              <div style="margin-top:3px"><input value="${esc(s.address||"")}" ${locked?"readonly":""} placeholder="地址" style="width:170px;font-size:13px" onchange="updStoreField('${s.id}','address',this.value)"/></div>
             </td>
             <td class="dim">${esc(s.route_code||"-")} · ${esc(s.day_group||"-")}</td>
             <td>${s.line_group_id?'<span class="green">已綁定</span>':'<span class="dim">未綁定</span>'}</td>
             <td>${s.status==='active'?'<span class="badge b-green">使用中</span>':'<span class="badge b-red">停用</span>'}</td>
             <td style="text-align:right;white-space:nowrap">
               <button class="btn2" onclick="toggleStore('${s.id}','${s.status}')">${s.status==='active'?'停用':'啟用'}</button>
-              <button class="danger" onclick="deleteStore('${s.id}','${esc(s.name)}')">刪除</button>
+              ${locked?"":`<button class="danger" onclick="deleteStore('${s.id}','${esc(s.name)}')">刪除</button>`}
             </td>
           </tr>`).join("")}
         </table></div>
-        <div class="dim" style="font-size:14px">※ 已有訂單記錄的店家無法刪除(保護歷史帳),只能停用</div>`;
+        <div class="dim" style="font-size:14px">${locked?"🔒 目前為唯讀模式,點右上「唯讀」可解鎖編輯":"※ 已有訂單記錄的店家無法刪除(保護歷史帳),只能停用"}</div>`;
     }
 
     // ============ 商品 ============
@@ -222,23 +234,23 @@ async function loadTab(){
         ${products.map((p,i)=>`
           <div class="card" style="padding:10px 12px">
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-              <span style="display:inline-flex;gap:4px">
+              ${locked?"":`<span style="display:inline-flex;gap:4px">
                 <button class="btn2" style="padding:4px 9px" ${i===0?"disabled":""} onclick="moveProduct(${i},-1)">↑</button>
                 <button class="btn2" style="padding:4px 9px" ${i===products.length-1?"disabled":""} onclick="moveProduct(${i},1)">↓</button>
-              </span>
-              <input value="${esc(p.name)}" style="flex:2;min-width:110px" onchange="updProductField('${p.id}','name',this.value)"/>
-              <input value="${esc(p.unit)}" style="width:64px" onchange="updProductField('${p.id}','unit',this.value)"/>
-              <input type="number" value="${p.base_price}" style="width:76px;text-align:right" onchange="updPrice('${p.id}',this.value)"/>
+              </span>`}
+              <input value="${esc(p.name)}" ${locked?"readonly":""} style="flex:2;min-width:110px" onchange="updProductField('${p.id}','name',this.value)"/>
+              <input value="${esc(p.unit)}" ${locked?"readonly":""} style="width:64px" onchange="updProductField('${p.id}','unit',this.value)"/>
+              <input type="number" value="${p.base_price}" ${locked?"readonly":""} style="width:76px;text-align:right" onchange="updPrice('${p.id}',this.value)"/>
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
               <span>${p.is_active?'<span class="badge b-green">上架</span>':'<span class="badge b-red">下架</span>'}</span>
               <span>
                 <button class="btn2" onclick="toggleProduct('${p.id}',${p.is_active})">${p.is_active?'下架':'上架'}</button>
-                <button class="danger" onclick="deleteProduct('${p.id}','${esc(p.name)}')">刪除</button>
+                ${locked?"":`<button class="danger" onclick="deleteProduct('${p.id}','${esc(p.name)}')">刪除</button>`}
               </span>
             </div>
           </div>`).join("")}
-        <div class="dim" style="font-size:14px">※ 已有訂單記錄的商品無法刪除(保護歷史帳),只能下架</div>`;
+        <div class="dim" style="font-size:14px">${locked?"🔒 目前為唯讀模式,點右上「唯讀」可解鎖編輯":"※ 已有訂單記錄的商品無法刪除(保護歷史帳),只能下架"}</div>`;
     }
 
     // ============ 客製價 ============
@@ -348,7 +360,7 @@ async function loadTab(){
                 <summary>梯次 ${esc(dg)} — ${groups[dg].length} 間店家(在序號框輸入數字即插入該位置,其餘自動順移)</summary>
                 ${groups[dg].map((s,i)=>`<div class="storeline" style="display:flex;align-items:center;gap:8px">
                   <input type="number" inputmode="numeric" min="1" max="${groups[dg].length}" value="${i+1}"
-                    style="width:52px;text-align:center"
+                    ${locked?"readonly":""} style="width:52px;text-align:center"
                     onchange="setRouteStorePos('${esc(rc)}','${esc(dg)}',${i},this.value)" onfocus="this.select()"/>
                   <span class="mono green">${esc(s.code)}</span> ${esc(s.name)} ${s.status!=='active'?'<span class="red">(停用)</span>':""}
                 </div>`).join("")}
