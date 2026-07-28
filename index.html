@@ -186,11 +186,18 @@ function render() {
   app.innerHTML = `
     <div class="header">
       <div class="code">[${esc(store.code)}]</div>
-      <div class="name">${esc(store.name)}${editOrderId?' <span style="color:var(--amber);font-size:14px">(編輯訂單)</span>':""}</div>
+      <div class="name">${esc(store.name)}${editOrderId?' <span style="color:var(--amber);font-size:15px">(修改今日訂單)</span>':""}</div>
     </div>
+    ${editOrderId?`
+    <div class="section" style="padding-bottom:0">
+      <div style="background:rgba(245,158,11,.12);border:1px solid var(--amber);color:var(--amber);
+                  border-radius:10px;padding:10px 12px;font-size:15px">
+        📝 這天已經有訂單了,以下為目前的訂購內容,直接修改即可(數量改0=取消該品項)
+      </div>
+    </div>`:""}
     <div class="section">
       <div class="date-row">
-        <label>配送日期${editOrderId?'(編輯中不可改)':''}</label>
+        <label>配送日期${editOrderId?'(修改中不可改)':''}</label>
         <input type="date" id="ddate" value="${deliveryDate}" ${editOrderId?'disabled':''} />
       </div>
       ${(!editOrderId && isOffDay(deliveryDate)) ? `
