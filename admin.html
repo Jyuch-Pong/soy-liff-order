@@ -190,7 +190,10 @@ async function loadTab(){
           <tr><th>店號</th><th>店名</th><th>路線/梯次</th><th>LINE綁定</th><th>狀態</th><th style="text-align:right"></th></tr>
           ${stores.map(s=>`<tr>
             <td class="mono green">${esc(s.store_code)}</td>
-            <td>${esc(s.name)}<div class="dim" style="font-size:13px">${esc(s.address||"")}</div></td>
+            <td>
+              <input value="${esc(s.name)}" style="width:130px;font-size:15px" onchange="updStoreField('${s.id}','name',this.value)"/>
+              <div style="margin-top:3px"><input value="${esc(s.address||"")}" placeholder="地址" style="width:170px;font-size:13px" onchange="updStoreField('${s.id}','address',this.value)"/></div>
+            </td>
             <td class="dim">${esc(s.route_code||"-")} · ${esc(s.day_group||"-")}</td>
             <td>${s.line_group_id?'<span class="green">已綁定</span>':'<span class="dim">未綁定</span>'}</td>
             <td>${s.status==='active'?'<span class="badge b-green">使用中</span>':'<span class="badge b-red">停用</span>'}</td>
@@ -368,6 +371,12 @@ window.createStore = async ()=>{
     await api("create_store",{body:{store_code:g("ns_code"),name:g("ns_name"),address:g("ns_addr"),route_code:g("ns_route"),day_group:g("ns_dg")}});
     loadTab();
   }catch(e){alert(e.message)}
+};
+window.updStoreField = async (id,field,v)=>{
+  const val = v.trim();
+  if (field==='name' && !val) return alert("店名不可為空白");
+  try { await api("update_store",{body:{id,[field]:val}}); }
+  catch(e){ alert("儲存失敗:"+e.message); loadTab(); }
 };
 window.toggleStore = async (id,status)=>{
   await api("update_store",{body:{id,status:status==='active'?'suspended':'active'}}); loadTab();
