@@ -42,7 +42,19 @@
   th{color:var(--text2);text-align:left;font-weight:500;padding:5px 6px;border-bottom:1px solid var(--border)}
   td{padding:6px;border-bottom:1px solid #2a2d30}
   tr:last-child td{border-bottom:none}
-  .oitem{font-size:14px;color:var(--text2);display:flex;justify-content:space-between;padding:2px 0}
+  .oitem{font-size:17px;color:var(--text);display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #26292b}
+  .oitem:last-child{border-bottom:none}
+  .oitem .nm{display:flex;align-items:center;gap:6px}
+  .oitem .qt{font-family:monospace;font-size:18px;font-weight:700}
+  .tgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+  .tbox{border-radius:12px;padding:10px 12px;border:2px solid}
+  .tbox.bag{background:rgba(59,130,246,.10);border-color:rgba(59,130,246,.55)}
+  .tbox.cup{background:rgba(249,115,22,.10);border-color:rgba(249,115,22,.55)}
+  .tbox.other{background:rgba(154,157,156,.08);border-color:var(--border)}
+  .tbox .tname{font-size:16px;font-weight:600;line-height:1.3}
+  .tbox .tqty{font-family:monospace;font-size:26px;font-weight:800;margin-top:4px}
+  .tbox.bag .tqty{color:#7eb3ff} .tbox.cup .tqty{color:#ffb27d} .tbox.other .tqty{color:var(--text)}
+  .tbox .tsub{font-size:13px;color:var(--text3);margin-top:2px}
   .qtyrow{display:flex;justify-content:space-between;align-items:center;padding:5px 0}
   .qtyrow .ctrl{display:flex;align-items:center;gap:10px}
   .qtyrow button{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:18px}
@@ -170,14 +182,15 @@ function renderTotals(){
     <div class="card">
       <details open>
         <summary><b>📦 當日品項總計</b></summary>
-        <table style="margin-top:6px">
-          <tr><th>品項</th><th style="text-align:right">總數量</th><th style="text-align:right">下單店數</th></tr>
-          ${data.totals.map(t=>`<tr>
-            <td>${esc(t.name)}</td>
-            <td style="text-align:right" class="mono green"><b>${t.qty}</b> <span class="dim">${esc(t.unit)}</span></td>
-            <td style="text-align:right" class="mono dim">${t.storeCount}</td>
-          </tr>`).join("")}
-        </table>
+        <div class="tgrid">
+          ${data.totals.map(t=>{
+            const c = t.unit.includes('袋')?'bag':t.unit.includes('杯')?'cup':'other';
+            return `<div class="tbox ${c}">
+              <div class="tname">${esc(t.name)}</div>
+              <div class="tqty">${t.qty}<span style="font-size:15px;font-weight:600"> ${esc(t.unit)}</span></div>
+              <div class="tsub">${t.storeCount} 間店</div>
+            </div>`}).join("")}
+        </div>
       </details>
     </div>`;
 }
@@ -209,7 +222,13 @@ function renderStore(s, isExtra){
             <b>$${s.order.total.toLocaleString()}</b>
           </summary>
           <div style="margin-top:6px">
-            ${s.order.items.map(it=>`<div class="oitem"><span>${esc(it.name)}</span><span class="mono">${it.qty} × $${it.price}</span></div>`).join("")}
+            ${s.order.items.map(it=>{
+              const u = it.unit||"";
+              const c = u.includes('袋')?'bag':u.includes('杯')?'cup':'other';
+              return `<div class="oitem">
+                <span class="nm"><span class="utag ${c}">${esc(u)}</span>${esc(it.name)}</span>
+                <span class="qt">${it.qty}<span style="font-size:14px;color:var(--text3);font-weight:400"> × $${it.price}</span></span>
+              </div>`}).join("")}
           </div>
         </details>
         ${!isBuilding ? `
