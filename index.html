@@ -321,6 +321,8 @@ window.submitOrder = async function () {
     products = data.products;
     if (data.editOrder) {
       // 編輯模式:帶入原訂單品項與配送日,日期鎖定不可改
+      // 關鍵:記下訂單ID,送出時才會走「更新既有訂單」而非建立新訂單
+      editOrderId = data.editOrder.id;
       deliveryDate = data.editOrder.deliveryDate;
       for (const it of data.editOrder.items) cart[it.productId] = it.quantity;
     } else {
