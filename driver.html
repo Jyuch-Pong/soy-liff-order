@@ -76,6 +76,17 @@
 <script>
 // ====== 設定 ======
 const API = "https://whwhufkehoxgrrwacqjv.supabase.co/functions/v1/driver-api";
+// 每籃(K)數量設定:單位含「袋」=6袋/籃、含「杯」=24杯/籃
+const PER_BASKET = { bag: 6, cup: 24 };
+function unitClass(u){ u=u||""; return u.includes("袋")?"bag":u.includes("杯")?"cup":"other"; }
+// 換算籃數:10袋→1K4、30杯→1K6、12袋→2K、4袋→4
+function toBasket(qty, unit){
+  const c = unitClass(unit);
+  const per = PER_BASKET[c];
+  if (!per || qty < per) return { main: String(qty), sub: "" };
+  const k = Math.floor(qty/per), r = qty%per;
+  return { main: r ? `${k}K${r}` : `${k}K`, sub: `${qty} ${unit}` };
+}
 
 let CRED = JSON.parse(sessionStorage.getItem("driverCred")||"null"); // {account,password,name,car_no}
 let viewDate = todayTW();
@@ -165,6 +176,7 @@ function render(){
     </div>
     <div class="wrap">
       ${renderTotals()}
+      ${renderDiscounts()}
       ${(data.extraStores&&data.extraStores.length)?`
         <div class="card" style="border-color:var(--amber)">
           <b class="amber">⚠️ 非配送日訂單(${data.extraStores.length})</b>
@@ -184,13 +196,37 @@ function renderTotals(){
         <summary><b>📦 當日品項總計</b></summary>
         <div class="tgrid">
           ${data.totals.map(t=>{
-            const c = t.unit.includes('袋')?'bag':t.unit.includes('杯')?'cup':'other';
+            const c = unitClass(t.unit);
+            const b = toBasket(t.qty, t.unit);
             return `<div class="tbox ${c}">
               <div class="tname">${esc(t.name)}</div>
-              <div class="tqty">${t.qty}<span style="font-size:15px;font-weight:600"> ${esc(t.unit)}</span></div>
-              <div class="tsub">${t.storeCount} 間店</div>
+              <div class="tqty">${b.main}${b.sub?"":`<span style="font-size:15px;font-weight:600"> ${esc(t.unit)}</span>`}</div>
+              <div class="tsub">${b.sub?esc(b.sub)+" · ":""}${t.storeCount} 間店</div>
             </div>`}).join("")}
         </div>
+      </details>
+    </div>`;
+}
+
+function renderDiscounts(){
+  if (!data.discounts || !data.discounts.length) return "";
+  return `
+    <div class="card" style="border-color:var(--amber)">
+      <details>
+        <summary style="display:flex;justify-content:space-between;align-items:center">
+          <b class="amber">💰 今日優惠統計</b>
+          <b class="amber" style="font-size:18px">-$${data.discountTotal.toLocaleString()}</b>
+        </summary>
+        <table style="margin-top:8px">
+          <tr><th>品項</th><th style="text-align:right">原價→優惠</th><th style="text-align:right">數量</th><th style="text-align:right">讓利</th></tr>
+          ${data.discounts.map(x=>`<tr>
+            <td><span class="utag ${unitClass(x.unit)}">${esc(x.unit)}</span>${esc(x.name)}</td>
+            <td style="text-align:right" class="mono dim">$${x.base}→<span class="amber">$${x.price}</span></td>
+            <td style="text-align:right" class="mono">${x.qty}</td>
+            <td style="text-align:right" class="mono amber"><b>-$${x.subtotal.toLocaleString()}</b></td>
+          </tr>`).join("")}
+        </table>
+        <div class="dim" style="font-size:13px;margin-top:6px">※ 單價低於商品基礎價者列入統計(每單位讓利 × 數量)</div>
       </details>
     </div>`;
 }
