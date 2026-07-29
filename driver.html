@@ -301,7 +301,7 @@ function renderStore(s, isExtra){
       </div>
 
       ${ordered ? `
-        <details style="margin-top:8px">
+        <details style="margin-top:8px" ${delivered?"":"open"}>
           <summary style="display:flex;justify-content:space-between">
             <span class="dim" style="font-size:14px">訂貨明細 ${s.order.source==='on_site'?'<span class="badge b-amber">現場建單</span>':""}</span>
             <b>$${s.order.total.toLocaleString()}</b>
