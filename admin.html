@@ -68,6 +68,8 @@ let locked = true; // 預設唯讀,避免誤觸修改
 let tab = "orders";
 let stores = [], products = [], orders = [], summary = [], drivers = [], customPrices = {};
 let selStore = "", orderDate = tomorrowTW();
+let invoiceMonth = new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"}).slice(0,7);
+let invoiceRows = [];
 
 const app = document.getElementById("app");
 
@@ -122,7 +124,7 @@ function render(){
         <button class="btn2" onclick="logout()">登出</button>
       </span></div>
     <div class="tabs">
-      ${[["orders","訂單"],["summary","品項統計"],["stores","店家"],["products","商品"],["prices","客製價"],["drivers","司機"],["routes","路線"]].map(([k,l])=>
+      ${[["orders","訂單"],["summary","品項統計"],["stores","店家"],["products","商品"],["prices","客製價"],["invoice","發票"],["drivers","司機"],["routes","路線"]].map(([k,l])=>
         `<button class="${tab===k?"on":""}" onclick="switchTab('${k}')">${l}</button>`).join("")}
     </div>
     <div class="wrap" id="content"><div class="dim">載入中…</div></div>`;
@@ -281,6 +283,51 @@ async function loadTab(){
         </table></div>`;
     }
 
+    // ============ 發票 ============
+    if (tab==="invoice"){
+      const d = await api("invoice_list",{params:{month:invoiceMonth}});
+      invoiceRows = d.rows;
+      const total = invoiceRows.reduce((s,r)=>s+r.amount,0);
+      stores = await api("stores");
+      c.innerHTML = `
+        <div class="row">
+          <label class="dim">開票月份</label>
+          <input type="month" value="${invoiceMonth}" onchange="chgInvoiceMonth(this.value)" />
+          <button class="btn2" onclick="exportInvoice()">📥 匯出開票清單</button>
+        </div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <b>${invoiceMonth} 開票清單</b>
+            <b class="green" style="font-size:18px">$${total.toLocaleString()}</b>
+          </div>
+          <table>
+            <tr><th>店號 / 店名</th><th>統編</th><th>抬頭</th><th style="text-align:right">筆數</th><th style="text-align:right">金額</th></tr>
+            ${invoiceRows.length===0?'<tr><td colspan="5" class="dim">尚未設定需開發票的店家(請於下方設定)</td></tr>':""}
+            ${invoiceRows.map(r=>`<tr>
+              <td><span class="mono green">${esc(r.store_code)}</span> ${esc(r.name)}</td>
+              <td class="mono">${esc(r.tax_id)||'<span class="red">未填</span>'}</td>
+              <td>${esc(r.invoice_title)||'<span class="dim">—</span>'}</td>
+              <td style="text-align:right" class="mono dim">${r.orderCount}</td>
+              <td style="text-align:right" class="mono"><b>$${r.amount.toLocaleString()}</b></td>
+            </tr>`).join("")}
+          </table>
+        </div>
+        <div class="card">
+          <b>發票設定</b>
+          <div class="dim" style="font-size:14px;margin:4px 0 8px">${locked?"🔒 唯讀模式,點右上解鎖後可設定":"勾選需開發票的店家,並填寫統編與抬頭"}</div>
+          <table>
+            <tr><th>店號 / 店名</th><th style="text-align:center">開發票</th><th>統一編號</th><th>發票抬頭</th></tr>
+            ${stores.map(s=>`<tr>
+              <td><span class="mono green">${esc(s.store_code)}</span> ${esc(s.name)}</td>
+              <td style="text-align:center"><input type="checkbox" ${s.needs_invoice?"checked":""} ${locked?"disabled":""}
+                style="width:20px;height:20px" onchange="updStoreField('${s.id}','needs_invoice',this.checked)"/></td>
+              <td><input value="${esc(s.tax_id||"")}" ${locked?"readonly":""} placeholder="8碼" style="width:90px" onchange="updStoreField('${s.id}','tax_id',this.value)"/></td>
+              <td><input value="${esc(s.invoice_title||"")}" ${locked?"readonly":""} placeholder="公司抬頭" style="width:150px" onchange="updStoreField('${s.id}','invoice_title',this.value)"/></td>
+            </tr>`).join("")}
+          </table>
+        </div>`;
+    }
+
     // ============ 司機 ============
     if (tab==="drivers"){
       drivers = await api("drivers");
@@ -385,10 +432,12 @@ window.createStore = async ()=>{
   }catch(e){alert(e.message)}
 };
 window.updStoreField = async (id,field,v)=>{
-  const val = v.trim();
+  const val = (typeof v === "boolean") ? v : v.trim();
   if (field==='name' && !val) return alert("店名不可為空白");
-  try { await api("update_store",{body:{id,[field]:val}}); }
-  catch(e){ alert("儲存失敗:"+e.message); loadTab(); }
+  try {
+    await api("update_store",{body:{id,[field]:val}});
+    if (field==='needs_invoice') loadTab(); // 開票清單需重整
+  } catch(e){ alert("儲存失敗:"+e.message); loadTab(); }
 };
 window.toggleStore = async (id,status)=>{
   await api("update_store",{body:{id,status:status==='active'?'suspended':'active'}}); loadTab();
@@ -502,6 +551,24 @@ window.saveEdit = async ()=>{
     closeEdit();
     loadTab();
   } catch(e){ alert("儲存失敗:"+e.message); }
+};
+
+window.chgInvoiceMonth = (v)=>{ invoiceMonth=v; loadTab(); };
+
+window.exportInvoice = ()=>{
+  if (!invoiceRows.length) return alert("沒有資料可匯出");
+  const rows = [["店號","店名","統一編號","發票抬頭","訂單筆數","開票金額"]];
+  let total = 0;
+  for (const r of invoiceRows){
+    rows.push([r.store_code, r.name, r.tax_id, r.invoice_title, r.orderCount, r.amount]);
+    total += r.amount;
+  }
+  rows.push(["","","","","合計", total]);
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:10},{wch:16},{wch:12},{wch:20},{wch:10},{wch:12}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "開票清單");
+  XLSX.writeFile(wb, `開票清單_${invoiceMonth}.xlsx`);
 };
 
 window.exportOrders = ()=>{
