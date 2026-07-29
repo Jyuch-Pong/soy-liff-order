@@ -239,7 +239,13 @@ function renderTotals(){
 }
 
 function renderDiscounts(){
-  if (!data.discounts || !data.discounts.length) return "";
+  if (!data.discounts) return ""; // 後端未提供(driver-api未更新)
+  if (!data.discounts.length) {
+    return `<div class="card">
+      <b class="dim">💰 今日折讓統計</b>
+      <div class="dim" style="font-size:14px;margin-top:4px">今日訂單皆為原價,無折讓</div>
+    </div>`;
+  }
   // 同品項(名稱+單位)歸為一組,組內列出各優惠價
   const groups = {};
   for (const x of data.discounts){
