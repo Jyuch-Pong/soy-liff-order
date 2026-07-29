@@ -55,6 +55,36 @@
   .tbox .tqty{font-family:monospace;font-size:26px;font-weight:800;margin-top:4px}
   .tbox.bag .tqty{color:#7eb3ff} .tbox.cup .tqty{color:#ffb27d} .tbox.other .tqty{color:var(--text)}
   .tbox .tsub{font-size:13px;color:var(--text3);margin-top:2px}
+  .dbox{border-radius:12px;padding:12px 14px;border:2px solid rgba(245,158,11,.5);background:rgba(245,158,11,.08);margin-top:8px}
+  .dhead{display:flex;justify-content:space-between;align-items:center;padding-bottom:8px;border-bottom:1px solid rgba(245,158,11,.3)}
+  .dhead .dname{font-size:17px;font-weight:700}
+  .dhead .dsum{font-family:monospace;font-size:22px;font-weight:800;color:var(--amber)}
+  .drow{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:15px}
+  .drow .dp{font-family:monospace;color:var(--text2);min-width:96px}
+  .drow .dp s{color:var(--text3)}
+  .drow .dp b{color:var(--amber)}
+  .drow .dq{font-family:monospace;flex:1;text-align:center;color:var(--text)}
+  .drow .ds{font-family:monospace;font-weight:700;color:var(--amber);min-width:64px;text-align:right}
+  .oitem{font-size:17px;color:var(--text);display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #26292b}
+  .oitem:last-child{border-bottom:none}
+  .oitem .nm{display:flex;align-items:center;gap:6px}
+  .oitem .qt{font-family:monospace;font-size:18px;font-weight:700}
+  .tgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+  .tbox{border-radius:12px;padding:10px 12px;border:2px solid}
+  .tbox.bag{background:rgba(59,130,246,.10);border-color:rgba(59,130,246,.55)}
+  .tbox.cup{background:rgba(249,115,22,.10);border-color:rgba(249,115,22,.55)}
+  .tbox.other{background:rgba(154,157,156,.08);border-color:var(--border)}
+  .tbox .tname{font-size:16px;font-weight:600;line-height:1.3}
+  .tbox .tqty{font-family:monospace;font-size:26px;font-weight:800;margin-top:4px}
+  .tbox.bag .tqty{color:#7eb3ff} .tbox.cup .tqty{color:#ffb27d} .tbox.other .tqty{color:var(--text)}
+  .tbox .tsub{font-size:13px;color:var(--text3);margin-top:2px}
+  .dbox{border-radius:12px;padding:10px 12px;border:2px solid rgba(245,158,11,.5);background:rgba(245,158,11,.08)}
+  .dbox .dname{font-size:16px;font-weight:600;line-height:1.3}
+  .dbox .dprice{font-size:14px;color:var(--text2);margin-top:3px;font-family:monospace}
+  .dbox .dprice s{color:var(--text3)}
+  .dbox .dprice b{color:var(--amber)}
+  .dbox .dcalc{font-size:13px;color:var(--text3);margin-top:2px;font-family:monospace}
+  .dbox .dsum{font-family:monospace;font-size:24px;font-weight:800;color:var(--amber);margin-top:4px}
   .qtyrow{display:flex;justify-content:space-between;align-items:center;padding:5px 0}
   .qtyrow .ctrl{display:flex;align-items:center;gap:10px}
   .qtyrow button{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:18px}
@@ -210,23 +240,36 @@ function renderTotals(){
 
 function renderDiscounts(){
   if (!data.discounts || !data.discounts.length) return "";
+  // 同品項(名稱+單位)歸為一組,組內列出各優惠價
+  const groups = {};
+  for (const x of data.discounts){
+    const key = x.name + "|" + x.unit;
+    if (!groups[key]) groups[key] = { name:x.name, unit:x.unit, rows:[], sum:0 };
+    groups[key].rows.push(x);
+    groups[key].sum += x.subtotal;
+  }
+  const list = Object.values(groups).sort((a,b)=>b.sum-a.sum);
   return `
     <div class="card" style="border-color:var(--amber)">
-      <details>
+      <details open>
         <summary style="display:flex;justify-content:space-between;align-items:center">
-          <b class="amber">💰 今日優惠統計</b>
-          <b class="amber" style="font-size:18px">-$${data.discountTotal.toLocaleString()}</b>
+          <b class="amber">💰 今日折讓統計</b>
+          <b class="amber" style="font-size:22px">-$${data.discountTotal.toLocaleString()}</b>
         </summary>
-        <table style="margin-top:8px">
-          <tr><th>品項</th><th style="text-align:right">原價→優惠</th><th style="text-align:right">數量</th><th style="text-align:right">讓利</th></tr>
-          ${data.discounts.map(x=>`<tr>
-            <td><span class="utag ${unitClass(x.unit)}">${esc(x.unit)}</span>${esc(x.name)}</td>
-            <td style="text-align:right" class="mono dim">$${x.base}→<span class="amber">$${x.price}</span></td>
-            <td style="text-align:right" class="mono">${x.qty}</td>
-            <td style="text-align:right" class="mono amber"><b>-$${x.subtotal.toLocaleString()}</b></td>
-          </tr>`).join("")}
-        </table>
-        <div class="dim" style="font-size:13px;margin-top:6px">※ 單價低於商品基礎價者列入統計(每單位讓利 × 數量)</div>
+        ${list.map(g=>`
+          <div class="dbox">
+            <div class="dhead">
+              <span class="dname"><span class="utag ${unitClass(g.unit)}">${esc(g.unit)}</span>${esc(g.name)}</span>
+              <span class="dsum">-$${g.sum.toLocaleString()}</span>
+            </div>
+            ${g.rows.sort((a,b)=>b.subtotal-a.subtotal).map(x=>`
+              <div class="drow">
+                <span class="dp"><s>$${x.base}</s>→<b>$${x.price}</b></span>
+                <span class="dq">${x.qty} ${esc(x.unit)} × $${x.diff}</span>
+                <span class="ds">-$${x.subtotal.toLocaleString()}</span>
+              </div>`).join("")}
+          </div>`).join("")}
+        <div class="dim" style="font-size:13px;margin-top:8px">※ 單價低於商品基礎價者列入;同品項不同優惠價分列計算</div>
       </details>
     </div>`;
 }
