@@ -97,6 +97,12 @@
   .utag.cup{background:rgba(249,115,22,.18);color:#ffb27d}
   .utag.other{background:rgba(154,157,156,.15);color:var(--text2)}
   .addr{font-size:14px;color:var(--text2);margin-top:2px}
+  a.navlink{display:inline-block;color:#60a5fa;text-decoration:none;border-bottom:1px dotted rgba(96,165,250,.5)}
+  .ordersum{display:flex;gap:8px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)}
+  .sumchip{font-size:15px;padding:4px 12px;border-radius:99px;border:1px solid}
+  .sumchip b{font-family:monospace;font-size:18px}
+  .sumchip.bag{color:#7eb3ff;border-color:rgba(59,130,246,.6);background:rgba(59,130,246,.10)}
+  .sumchip.cup{color:#ffb27d;border-color:rgba(249,115,22,.6);background:rgba(249,115,22,.10)}
   .rowbtns{display:flex;gap:8px;margin-top:10px}
   .rowbtns button{flex:1}
 </style>
@@ -177,11 +183,16 @@ function logout(){ CRED=null; sessionStorage.removeItem("driverCred"); renderLog
 window.logout = logout;
 
 // ====== 主畫面 ======
-async function load(){
-  app.innerHTML = `<div class="wrap dim">載入中…</div>`;
+async function load(keepScroll){
+  const scrollY = keepScroll ? window.scrollY : 0;
+  if (!keepScroll) app.innerHTML = `<div class="wrap dim">載入中…</div>`;
   try {
     data = await api("today",{params:{date:viewDate}});
     render();
+    if (keepScroll) {
+      window.scrollTo(0, scrollY);
+      requestAnimationFrame(()=>window.scrollTo(0, scrollY)); // 版面穩定後再校正一次
+    }
   } catch(e){
     if (String(e.message)!=="unauthorized")
       app.innerHTML = `<div class="wrap red">載入失敗:${esc(e.message)}</div>`;
@@ -292,7 +303,7 @@ function renderStore(s, isExtra){
           <span class="mono dim" style="font-size:13px;font-weight:700">${esc(s.store_code)}</span>
           <b style="margin-left:4px">${esc(s.name)}</b>
           ${isExtra?`<span class="badge b-amber" style="margin-left:4px">梯次 ${esc(s.day_group||"?")}</span>`:""}
-          <div class="addr">📍 ${esc(s.address||"")}</div>
+          ${s.address?`<a class="addr navlink" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s.address)}" target="_blank" rel="noopener">📍 ${esc(s.address)} <span style="font-size:13px">▸導航</span></a>`:""}
           ${s.note?`<div class="addr" style="color:var(--amber)">📝 ${esc(s.note)}</div>`:""}
         </div>
         ${delivered?'<span class="badge b-blue">✓ 已送達</span>'
@@ -314,6 +325,20 @@ function renderStore(s, isExtra){
                 <span class="nm"><span class="utag ${c}">${esc(u)}</span>${esc(it.name)}</span>
                 <span class="qt">${it.qty}<span style="font-size:14px;color:var(--text3);font-weight:400"> × $${it.price}</span></span>
               </div>`}).join("")}
+            ${(()=>{
+              let bag=0, cup=0;
+              for (const it of s.order.items){
+                const u = it.unit||"";
+                if (u.includes('袋')) bag += it.qty;
+                else if (u.includes('杯')) cup += it.qty;
+              }
+              if (!bag && !cup) return "";
+              const chip = (label,n,cls)=>`<span class="sumchip ${cls}">${label} <b>${n}</b></span>`;
+              return `<div class="ordersum">
+                ${bag?chip("袋裝合計",bag,"bag"):""}
+                ${cup?chip("杯裝合計",cup,"cup"):""}
+              </div>`;
+            })()}
           </div>
         </details>
         ${!isBuilding ? `
@@ -394,13 +419,13 @@ window.submitBuilder = async ()=>{
       await api("addon",{body:{orderId:builder.orderId,storeId:builder.storeId,items}});
     }
     builder=null;
-    load();
+    load(true);
   } catch(e){ alert(e.message); }
 };
 
 window.markDelivered = async (orderId)=>{
   if (!confirm("確認此店已送達?")) return;
-  try { await api("mark_delivered",{body:{orderId}}); load(); } catch(e){ alert(e.message); }
+  try { await api("mark_delivered",{body:{orderId}}); load(true); } catch(e){ alert(e.message); }
 };
 
 // ====== 啟動 ======
