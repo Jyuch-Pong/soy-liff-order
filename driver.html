@@ -183,15 +183,19 @@ function logout(){ CRED=null; sessionStorage.removeItem("driverCred"); renderLog
 window.logout = logout;
 
 // ====== 主畫面 ======
-async function load(keepScroll){
-  const scrollY = keepScroll ? window.scrollY : 0;
-  if (!keepScroll) app.innerHTML = `<div class="wrap dim">載入中…</div>`;
+async function load(focusStoreId){
+  if (!focusStoreId) app.innerHTML = `<div class="wrap dim">載入中…</div>`;
   try {
     data = await api("today",{params:{date:viewDate}});
     render();
-    if (keepScroll) {
-      window.scrollTo(0, scrollY);
-      requestAnimationFrame(()=>window.scrollTo(0, scrollY)); // 版面穩定後再校正一次
+    // 捲回原本看的那間店(送達後明細會收合、版面高度改變,用元素定位比像素可靠)
+    const target = focusStoreId || sessionStorage.getItem("driverFocus");
+    if (target) {
+      const el = document.getElementById("s-" + target);
+      if (el) {
+        el.scrollIntoView({ block: "center" });
+        requestAnimationFrame(()=>el.scrollIntoView({ block: "center" }));
+      }
     }
   } catch(e){
     if (String(e.message)!=="unauthorized")
@@ -297,7 +301,7 @@ function renderStore(s, isExtra){
   const cls = delivered ? "s-done" : ordered ? "s-green" : "s-red";
   const isBuilding = builder && builder.storeId===s.id;
   return `
-    <div class="scard ${cls}" ${isExtra?'style="border-style:dashed"':""}>
+    <div class="scard ${cls}" id="s-${s.id}" ${isExtra?'style="border-style:dashed"':""}>
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
         <div>
           <span class="mono dim" style="font-size:13px;font-weight:700">${esc(s.store_code)}</span>
@@ -307,7 +311,9 @@ function renderStore(s, isExtra){
           ${s.note?`<div class="addr" style="color:var(--amber)">📝 ${esc(s.note)}</div>`:""}
         </div>
         ${delivered?'<span class="badge b-blue">✓ 已送達</span>'
-          :ordered?'<span class="badge b-green">已訂貨</span>'
+          :ordered?(s.order.status==='provisional'
+             ?'<span class="badge b-amber">📦 預抓(未確認)</span>'
+             :'<span class="badge b-green">已訂貨</span>')
           :'<span class="badge b-red">未訂貨</span>'}
       </div>
 
@@ -348,10 +354,13 @@ function renderStore(s, isExtra){
           <div class="rowbtns">
             ${!delivered?`<button class="btn2" onclick="openEditBuilder('${s.id}','${s.order.id}')">✎ 編輯</button>`:""}
             ${!delivered?`<button class="btn2" onclick="openBuilder('${s.id}','addon','${s.order.id}')">＋ 追加</button>`:""}
-            ${!delivered?`<button class="btn" onclick="markDelivered('${s.order.id}')">✓ 送達</button>`:""}
+            ${!delivered?`<button class="btn" onclick="markDelivered('${s.order.id}','${s.id}')">✓ 送達</button>`:""}
           </div>`:""}
       ` : `
-        ${!isBuilding?`<button class="btn-red full" style="margin-top:10px" onclick="openBuilder('${s.id}','new')">現場快速建單</button>`:""}
+        ${!isBuilding?`<div class="rowbtns" style="margin-top:10px">
+          <button class="btn2" onclick="openBuilder('${s.id}','pre')">📦 預抓數量</button>
+          <button class="btn-red" style="flex:1" onclick="openBuilder('${s.id}','new')">現場快速建單</button>
+        </div>`:""}
       `}
 
       ${isBuilding ? renderBuilder(s) : ""}
@@ -361,7 +370,7 @@ function renderStore(s, isExtra){
 function renderBuilder(s){
   return `
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-      <b style="font-size:15px">${builder.mode==='addon'?'追加品項':builder.mode==='edit'?'編輯訂單(數量歸0=移除該品項)':'建立訂單'}</b>
+      <b style="font-size:15px">${builder.mode==='addon'?'追加品項':builder.mode==='edit'?(isProvisional()?'調整預抓數量(全部歸0=店家不叫貨)':'編輯訂單(數量歸0=移除該品項)'):builder.mode==='pre'?'預抓數量(計入當日總計,到現場再調整)':'建立訂單'}</b>
       ${builder.priceList.map(p=>{
         const q = builder.cart[p.id]||0;
         const ucls = p.unit.includes('袋')?'bag':p.unit.includes('杯')?'cup':'other';
@@ -380,16 +389,21 @@ function renderBuilder(s){
       </div>
       <div class="rowbtns">
         <button class="btn2" onclick="closeBuilder()">取消</button>
-        <button class="btn" onclick="submitBuilder()">${builder.mode==='addon'?'確認追加':builder.mode==='edit'?'儲存變更':'建立訂單'}</button>
+        <button class="btn" onclick="submitBuilder()">${builder.mode==='addon'?'確認追加':builder.mode==='edit'?'儲存變更':builder.mode==='pre'?'儲存預抓':'建立訂單'}</button>
       </div>
     </div>`;
 }
 
 // ====== 操作 ======
-window.chgDate = (v)=>{ viewDate=v; builder=null; load(); };
+window.chgDate = (v)=>{ viewDate=v; builder=null; sessionStorage.removeItem("driverFocus"); load(); };
 async function loadPrices(storeId){
   try { return await api("store_prices",{params:{storeId}}); }
   catch(e){ alert("載入價格失敗:"+e.message); return null; }
+}
+function isProvisional(){
+  if (!builder) return false;
+  const s = data.stores.find(x=>x.id===builder.storeId) || (data.extraStores||[]).find(x=>x.id===builder.storeId);
+  return !!(s && s.order && s.order.status==='provisional');
 }
 window.openBuilder = async (storeId,mode,orderId)=>{
   const priceList = await loadPrices(storeId);
@@ -412,27 +426,49 @@ window.setBQty = (pid,v)=>{ builder.cart[pid]=Math.max(0,Math.floor(Number(v)||0
 
 window.submitBuilder = async ()=>{
   const items = Object.entries(builder.cart).filter(([,q])=>q>0).map(([productId,qty])=>({productId,qty}));
-  if (!items.length) return alert("請選擇品項");
+  if (!items.length) {
+    // 預抓訂單允許全部歸零(代表店家最終不叫貨)
+    if (!(builder.mode==="edit" && isProvisional())) return alert("請選擇品項");
+    if (!confirm("全部歸零將取消此筆預抓,確定?")) return;
+  }
   try {
-    if (builder.mode==="new"){
-      await api("create_onsite",{body:{storeId:builder.storeId,date:viewDate,items}});
+    if (builder.mode==="new" || builder.mode==="pre"){
+      await api("create_onsite",{body:{storeId:builder.storeId,date:viewDate,items,provisional:builder.mode==="pre"}});
     } else if (builder.mode==="edit"){
       await api("edit_order",{body:{orderId:builder.orderId,storeId:builder.storeId,items}});
     } else {
       await api("addon",{body:{orderId:builder.orderId,storeId:builder.storeId,items}});
     }
+    const sid = builder.storeId;
     builder=null;
-    load(true);
+    load(sid);
   } catch(e){ alert(e.message); }
 };
 
-window.markDelivered = async (orderId)=>{
+window.markDelivered = async (orderId, storeId)=>{
   if (!confirm("確認此店已送達?")) return;
-  try { await api("mark_delivered",{body:{orderId}}); load(true); } catch(e){ alert(e.message); }
+  try { await api("mark_delivered",{body:{orderId}}); load(storeId); } catch(e){ alert(e.message); }
 };
 
+// ====== 記住目前檢視位置(手機瀏覽器閒置後重新載入仍能回到原處) ======
+let scrollTimer = null;
+window.addEventListener("scroll", ()=>{
+  clearTimeout(scrollTimer);
+  scrollTimer = setTimeout(()=>{
+    const cards = document.querySelectorAll(".scard");
+    const mid = window.innerHeight/2;
+    let best=null, bestD=Infinity;
+    for (const c of cards){
+      const r = c.getBoundingClientRect();
+      const d = Math.abs(r.top + r.height/2 - mid);
+      if (d < bestD){ bestD=d; best=c; }
+    }
+    if (best) sessionStorage.setItem("driverFocus", best.id.replace(/^s-/,""));
+  }, 250);
+});
+
 // ====== 啟動 ======
-if (CRED) load(); else renderLogin();
+if (CRED) load(sessionStorage.getItem("driverFocus")||undefined); else renderLogin();
 </script>
 </body>
 </html>
