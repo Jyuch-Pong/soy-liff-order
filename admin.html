@@ -70,12 +70,31 @@ let stores = [], products = [], orders = [], summary = [], drivers = [], customP
 let selStore = "", orderDate = tomorrowTW();
 let invoiceMonth = new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"}).slice(0,7);
 let invoiceRows = [];
+let fRoute = "", fDay = "", fKeyword = "";   // 店家分頁篩選
+let pRoute = "", pDay = "", pOnlyCustom = false; // 客製價分頁篩選
 
 const app = document.getElementById("app");
 
 function tomorrowTW(){
   return new Date(Date.now()+86400000).toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"});
 }
+function filterStores(list, route, day, kw){
+  const k = (kw||"").trim().toLowerCase();
+  return list.filter(s=>{
+    if (route && s.route_code !== route) return false;
+    if (day && s.day_group !== day) return false;
+    if (k && !((s.store_code||"").toLowerCase().includes(k) || (s.name||"").toLowerCase().includes(k))) return false;
+    return true;
+  });
+}
+function routeOptions(list, sel){
+  const rs = [...new Set(list.map(s=>s.route_code).filter(Boolean))].sort();
+  return `<option value="">全部路線</option>` + rs.map(r=>`<option value="${r}" ${r===sel?"selected":""}>路線 ${r}</option>`).join("");
+}
+function dayOptions(sel){
+  return `<option value="">全部梯次</option>` + DAY_GROUPS.map(d=>`<option value="${d}" ${d===sel?"selected":""}>${d}</option>`).join("");
+}
+
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 
 async function api(action, opts={}){
@@ -190,6 +209,14 @@ async function loadTab(){
       stores = await api("stores");
       c.innerHTML = `
         <div class="card">
+          <div class="row" style="margin-bottom:0">
+            <select onchange="setF('route',this.value)" style="min-width:110px">${routeOptions(stores,fRoute)}</select>
+            <select onchange="setF('day',this.value)" style="min-width:100px">${dayOptions(fDay)}</select>
+            <input id="fkw" value="${esc(fKeyword)}" placeholder="搜尋店號或店名" style="flex:1;min-width:140px" oninput="setF('kw',this.value)"/>
+            <span class="dim">符合 <b class="green">${filterStores(stores,fRoute,fDay,fKeyword).length}</b> / ${stores.length} 間</span>
+          </div>
+        </div>
+        <div class="card">
           <b>新增店家</b>
           <div class="row" style="margin-top:8px">
             <input id="ns_code" placeholder="店號 如A-001" style="width:110px"/>
@@ -202,7 +229,7 @@ async function loadTab(){
         </div>
         <div class="card"><table>
           <tr><th>店號</th><th>店名</th><th>路線/梯次</th><th>LINE綁定</th><th>狀態</th><th style="text-align:right"></th></tr>
-          ${stores.map(s=>`<tr>
+          ${filterStores(stores,fRoute,fDay,fKeyword).map(s=>`<tr>
             <td class="mono green">${esc(s.store_code)}</td>
             <td>
               <input value="${esc(s.name)}" ${locked?"readonly":""} style="width:130px;font-size:15px" onchange="updStoreField('${s.id}','name',this.value)"/>
@@ -260,18 +287,36 @@ async function loadTab(){
       stores = await api("stores");
       products = await api("products");
       if (!selStore && stores.length) selStore = stores[0].id;
+      const pList = filterStores(stores, pRoute, pDay, "");
+      if (!pList.find(s=>s.id===selStore)) selStore = pList.length ? pList[0].id : "";
       const cp = selStore ? await api("custom_prices",{params:{storeId:selStore}}) : [];
       customPrices = Object.fromEntries(cp.map(c=>[c.product_id, c.custom_price]));
+      const customCount = Object.keys(customPrices).length;
       c.innerHTML = `
-        <div class="row">
-          <label class="dim">選擇店家</label>
-          <select onchange="chgStore(this.value)">
-            ${stores.map(s=>`<option value="${s.id}" ${s.id===selStore?"selected":""}>[${esc(s.store_code)}] ${esc(s.name)}</option>`).join("")}
-          </select>
+        <div class="card">
+          <div class="row" style="margin-bottom:8px">
+            <select onchange="setP('route',this.value)" style="min-width:110px">${routeOptions(stores,pRoute)}</select>
+            <select onchange="setP('day',this.value)" style="min-width:100px">${dayOptions(pDay)}</select>
+            <span class="dim">${pList.length} 間店</span>
+          </div>
+          <div class="row" style="margin-bottom:0">
+            <label class="dim">店家</label>
+            <select onchange="chgStore(this.value)" style="flex:1;min-width:180px">
+              ${pList.length===0?'<option value="">此篩選無店家</option>':""}
+              ${pList.map(s=>`<option value="${s.id}" ${s.id===selStore?"selected":""}>[${esc(s.store_code)}] ${esc(s.name)}</option>`).join("")}
+            </select>
+            ${selStore?`<span class="dim">已設 <b class="amber">${customCount}</b> 項客製價</span>`:""}
+          </div>
+          ${customCount?`<div class="row" style="margin-top:8px;margin-bottom:0">
+            <label class="dim" style="display:flex;align-items:center;gap:6px">
+              <input type="checkbox" ${pOnlyCustom?"checked":""} onchange="setP('only',this.checked)" style="width:18px;height:18px"/>
+              只顯示已設客製價的品項
+            </label>
+          </div>`:""}
         </div>
         <div class="card"><table>
           <tr><th>商品</th><th style="text-align:right">基礎價</th><th style="text-align:right">此店價格(留空=用基礎價)</th><th></th></tr>
-          ${products.filter(p=>p.is_active).map(p=>{
+          ${products.filter(p=>p.is_active && (!pOnlyCustom || customPrices[p.id]!=null)).map(p=>{
             const has = customPrices[p.id]!=null;
             const ucls = p.unit.includes('袋')?'bag':p.unit.includes('杯')?'cup':'other';
             return `<tr>
@@ -423,6 +468,19 @@ async function loadTab(){
 // ====== 操作 ======
 window.chgDate = (v)=>{ orderDate=v; loadTab(); };
 window.chgStore = (v)=>{ selStore=v; loadTab(); };
+window.setF = (k,v)=>{
+  if (k==='route') fRoute=v; else if (k==='day') fDay=v; else fKeyword=v;
+  if (k==='kw'){ // 搜尋不重新抓資料,只重繪
+    clearTimeout(window._kwT);
+    window._kwT = setTimeout(()=>{ loadTab().then(()=>{ const el=document.getElementById("fkw"); if(el){el.focus(); el.setSelectionRange(el.value.length,el.value.length);} }); }, 250);
+  } else loadTab();
+};
+window.setP = (k,v)=>{
+  if (k==='route'){ pRoute=v; selStore=""; }
+  else if (k==='day'){ pDay=v; selStore=""; }
+  else pOnlyCustom=v;
+  loadTab();
+};
 
 window.createStore = async ()=>{
   const g = id=>document.getElementById(id).value.trim();
