@@ -103,6 +103,9 @@
   .sumchip b{font-family:monospace;font-size:18px}
   .sumchip.bag{color:#7eb3ff;border-color:rgba(59,130,246,.6);background:rgba(59,130,246,.10)}
   .sumchip.cup{color:#ffb27d;border-color:rgba(249,115,22,.6);background:rgba(249,115,22,.10)}
+  .giftbadge{margin-left:6px;font-size:13px;font-weight:700;color:#7eb3ff;background:rgba(59,130,246,.15);border-radius:6px;padding:1px 7px}
+  .exrow{display:flex;justify-content:space-between;align-items:center;font-size:15px;padding:4px 0;color:var(--text2)}
+  .exbox{margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)}
   .rowbtns{display:flex;gap:8px;margin-top:10px}
   .rowbtns button{flex:1}
 </style>
@@ -328,15 +331,22 @@ function renderStore(s, isExtra){
               const u = it.unit||"";
               const c = u.includes('袋')?'bag':u.includes('杯')?'cup':'other';
               return `<div class="oitem">
-                <span class="nm"><span class="utag ${c}">${esc(u)}</span>${esc(it.name)}</span>
-                <span class="qt">${it.qty}<span style="font-size:14px;color:var(--text3);font-weight:400"> × $${it.price}</span></span>
+                <span class="nm"><span class="utag ${c}">${esc(u)}</span>${esc(it.name)}${it.gift?`<span class="giftbadge">+贈${it.gift}</span>`:""}</span>
+                <span class="qt">${it.gift?`${it.qty+it.gift}`:it.qty}<span style="font-size:14px;color:var(--text3);font-weight:400"> ${it.gift?`(${it.qty}+${it.gift})`:""} × $${it.price}</span></span>
               </div>`}).join("")}
             ${(()=>{
               let bag=0, cup=0;
               for (const it of s.order.items){
                 const u = it.unit||"";
-                if (u.includes('袋')) bag += it.qty;
-                else if (u.includes('杯')) cup += it.qty;
+                const n = it.qty + (it.gift||0);
+                if (u.includes('袋')) bag += n;
+                else if (u.includes('杯')) cup += n;
+              }
+              // 換貨補的新品也要帶
+              for (const e of (s.exchanges||[])){
+                const u = e.unit||"";
+                if (u.includes('袋')) bag += e.replaced;
+                else if (u.includes('杯')) cup += e.replaced;
               }
               if (!bag && !cup) return "";
               const chip = (label,n,cls)=>{
@@ -351,14 +361,28 @@ function renderStore(s, isExtra){
           </div>
         </details>
         ${!isBuilding ? `
+          ${(s.exchanges&&s.exchanges.length)?`<div class="exbox">
+            ${s.exchanges.map(e=>`<div class="exrow">
+              <span>🔄 ${esc(e.name)} <span class="dim">${esc(e.unit)}</span></span>
+              <span class="mono">回收${e.returned} / 補${e.replaced}</span>
+            </div>`).join("")}
+          </div>`:""}
           <div class="rowbtns">
+            ${!delivered?`<button class="btn2" onclick="openExchange('${s.id}')">🔄 換貨</button>`:""}
             ${!delivered?`<button class="btn2" onclick="openEditBuilder('${s.id}','${s.order.id}')">✎ 編輯</button>`:""}
             ${!delivered?`<button class="btn2" onclick="openBuilder('${s.id}','addon','${s.order.id}')">＋ 追加</button>`:""}
             ${!delivered?`<button class="btn" onclick="markDelivered('${s.order.id}','${s.id}')">✓ 送達</button>`:""}
           </div>`:""}
       ` : `
+        ${(s.exchanges&&s.exchanges.length)?`<div class="exbox">
+          ${s.exchanges.map(e=>`<div class="exrow">
+            <span>🔄 ${esc(e.name)} <span class="dim">${esc(e.unit)}</span></span>
+            <span class="mono">回收${e.returned} / 補${e.replaced}</span>
+          </div>`).join("")}
+        </div>`:""}
         ${!isBuilding?`<div class="rowbtns" style="margin-top:10px">
-          <button class="btn2" onclick="openBuilder('${s.id}','pre')">📦 預抓數量</button>
+          <button class="btn2" onclick="openExchange('${s.id}')">🔄 換貨</button>
+          <button class="btn2" onclick="openBuilder('${s.id}','pre')">📦 預抓</button>
           <button class="btn-red" style="flex:1" onclick="openBuilder('${s.id}','new')">現場快速建單</button>
         </div>`:""}
       `}
@@ -448,6 +472,56 @@ window.submitBuilder = async ()=>{
 window.markDelivered = async (orderId, storeId)=>{
   if (!confirm("確認此店已送達?")) return;
   try { await api("mark_delivered",{body:{orderId}}); load(storeId); } catch(e){ alert(e.message); }
+};
+
+window.openExchange = async (storeId)=>{
+  const list = await loadPrices(storeId);
+  if (!list) return;
+  const cups = list.filter(p=>(p.unit||"").includes("杯"));
+  const opts = (cups.length?cups:list).map(p=>`<option value="${p.id}">${esc(p.name)} (${esc(p.unit)})</option>`).join("");
+  const html = `
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:flex;align-items:flex-end"
+         onclick="if(event.target===this)closeExchange()">
+      <div style="background:var(--card);width:100%;border-radius:16px 16px 0 0;padding:16px">
+        <b style="font-size:17px">🔄 過期換貨登記</b>
+        <div class="dim" style="font-size:14px;margin:4px 0 12px">回收過期品、補新品給店家(不計費用)</div>
+        <div style="margin-bottom:10px">
+          <label class="dim" style="font-size:14px">品項</label>
+          <select id="ex_pid" style="width:100%;margin-top:4px;font-size:16px;padding:9px">${opts}</select>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:10px">
+          <div style="flex:1">
+            <label class="dim" style="font-size:14px">回收(過期)</label>
+            <input id="ex_ret" type="number" inputmode="numeric" min="0" value="0" style="width:100%;margin-top:4px;font-size:18px;padding:9px;text-align:center" onfocus="this.select()"/>
+          </div>
+          <div style="flex:1">
+            <label class="dim" style="font-size:14px">補貨(新品)</label>
+            <input id="ex_rep" type="number" inputmode="numeric" min="0" value="0" style="width:100%;margin-top:4px;font-size:18px;padding:9px;text-align:center" onfocus="this.select()"/>
+          </div>
+        </div>
+        <input id="ex_note" placeholder="備註(選填)" style="width:100%;margin-bottom:12px;font-size:15px;padding:9px"/>
+        <div style="display:flex;gap:8px">
+          <button class="btn2" style="flex:1;padding:12px" onclick="closeExchange()">取消</button>
+          <button class="btn" style="flex:2;padding:12px" onclick="submitExchange('${storeId}')">確認登記</button>
+        </div>
+      </div>
+    </div>`;
+  let m = document.getElementById("exModal");
+  if (!m){ m=document.createElement("div"); m.id="exModal"; document.body.appendChild(m); }
+  m.innerHTML = html;
+};
+window.closeExchange = ()=>{ const m=document.getElementById("exModal"); if(m)m.innerHTML=""; };
+window.submitExchange = async (storeId)=>{
+  const productId = document.getElementById("ex_pid").value;
+  const returned = document.getElementById("ex_ret").value;
+  const replaced = document.getElementById("ex_rep").value;
+  const note = document.getElementById("ex_note").value;
+  if (Number(returned)<=0 && Number(replaced)<=0) return alert("請填寫回收或補貨數量");
+  try {
+    await api("add_exchange",{body:{storeId,productId,date:viewDate,returned,replaced,note}});
+    closeExchange();
+    load(storeId);
+  } catch(e){ alert("登記失敗:"+e.message); }
 };
 
 // ====== 記住目前檢視位置(手機瀏覽器閒置後重新載入仍能回到原處) ======
