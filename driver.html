@@ -331,14 +331,14 @@ function renderStore(s, isExtra){
               const u = it.unit||"";
               const c = u.includes('袋')?'bag':u.includes('杯')?'cup':'other';
               return `<div class="oitem">
-                <span class="nm"><span class="utag ${c}">${esc(u)}</span>${esc(it.name)}${it.gift?`<span class="giftbadge">+贈${it.gift}</span>`:""}</span>
-                <span class="qt">${it.gift?`${it.qty+it.gift}`:it.qty}<span style="font-size:14px;color:var(--text3);font-weight:400"> ${it.gift?`(${it.qty}+${it.gift})`:""} × $${it.price}</span></span>
+                <span class="nm"><span class="utag ${c}">${esc(u)}</span>${esc(it.name)}${it.isGift?'<span class="giftbadge">🎁贈品</span>':""}</span>
+                <span class="qt">${it.qty}<span style="font-size:14px;color:var(--text3);font-weight:400">${it.isGift?" (不計價)":` × $${it.price}`}</span></span>
               </div>`}).join("")}
             ${(()=>{
               let bag=0, cup=0;
               for (const it of s.order.items){
                 const u = it.unit||"";
-                const n = it.qty + (it.gift||0);
+                const n = it.qty;
                 if (u.includes('袋')) bag += n;
                 else if (u.includes('杯')) cup += n;
               }
@@ -407,6 +407,29 @@ function renderBuilder(s){
             <button class="p" onclick="chgQty('${p.id}',1)">＋</button>
           </div>
         </div>`}).join("")}
+      ${(()=>{
+        const g = bGiftInfo();
+        if (!g.bagGift && !g.cupGift) return "";
+        const rows = [];
+        if (g.bagGift) rows.push({cls:"袋",th:g.bagTh,got:g.bagGift,sel:g.selBag});
+        if (g.cupGift) rows.push({cls:"杯",th:g.cupTh,got:g.cupGift,sel:g.selCup});
+        return `<div style="margin-top:10px;padding:10px;border:1px solid #3b82f6;border-radius:10px;background:rgba(59,130,246,.10)">
+          <b style="color:#7eb3ff;font-size:15px">🎁 搭贈</b>
+          ${rows.map(r=>`
+            <div style="font-size:15px;margin-top:6px">滿${r.th}${r.cls} 可送 <b style="color:#7eb3ff">${r.got}</b>${r.cls}
+              ${r.sel<r.got?`<span class="amber">(還可選${r.got-r.sel})</span>`:'<span class="green">✓</span>'}</div>
+            ${builder.priceList.filter(p=>(p.unit||"").includes(r.cls)).map(p=>{
+              const gq = builder.giftCart[p.id]||0;
+              return `<div class="qtyrow" style="padding:3px 0">
+                <span style="font-size:15px">${esc(p.name)}</span>
+                <div class="ctrl">
+                  <button onclick="chgBGift('${p.id}',-1,'${r.cls}')">−</button>
+                  <span style="min-width:24px;text-align:center;font-family:monospace;font-size:16px;color:${gq?'#7eb3ff':'var(--text3)'}">${gq}</span>
+                  <button onclick="chgBGift('${p.id}',1,'${r.cls}')" style="background:rgba(59,130,246,.25);border-color:#3b82f6;color:#7eb3ff">＋</button>
+                </div>
+              </div>`}).join("")}`).join("")}
+        </div>`;
+      })()}
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--border);margin-top:6px">
         <span class="dim">合計</span>
         <b style="font-size:18px">$${builder.priceList.reduce((s,p)=>s+(builder.cart[p.id]||0)*p.price,0).toLocaleString()}</b>
@@ -421,27 +444,55 @@ function renderBuilder(s){
 // ====== 操作 ======
 window.chgDate = (v)=>{ viewDate=v; builder=null; sessionStorage.removeItem("driverFocus"); load(); };
 async function loadPrices(storeId){
-  try { return await api("store_prices",{params:{storeId}}); }
-  catch(e){ alert("載入價格失敗:"+e.message); return null; }
+  try {
+    const r = await api("store_prices",{params:{storeId}});
+    return Array.isArray(r) ? { products:r, giftBag:null, giftCup:null } : r;
+  } catch(e){ alert("載入價格失敗:"+e.message); return null; }
 }
+function bGiftInfo(){
+  let bagQty=0, cupQty=0, selBag=0, selCup=0;
+  for (const p of builder.priceList){
+    const q = builder.cart[p.id]||0, g = builder.giftCart[p.id]||0;
+    const u = p.unit||"";
+    if (u.includes("袋")){ bagQty+=q; selBag+=g; }
+    else if (u.includes("杯")){ cupQty+=q; selCup+=g; }
+  }
+  const bagTh = builder.giftBag, cupTh = builder.giftCup;
+  return { bagTh, cupTh, selBag, selCup,
+    bagGift: (bagTh&&bagTh>0)?Math.floor(bagQty/bagTh):0,
+    cupGift: (cupTh&&cupTh>0)?Math.floor(cupQty/cupTh):0 };
+}
+window.chgBGift = (pid,d,cls)=>{
+  const g = bGiftInfo();
+  const max = cls==="袋"?g.bagGift:g.cupGift;
+  const sel = cls==="袋"?g.selBag:g.selCup;
+  const cur = builder.giftCart[pid]||0;
+  if (d>0 && sel>=max) return alert(`${cls}裝贈品最多 ${max}`);
+  builder.giftCart[pid] = Math.max(0, cur+d);
+  if (!builder.giftCart[pid]) delete builder.giftCart[pid];
+  render();
+};
+
 function isProvisional(){
   if (!builder) return false;
   const s = data.stores.find(x=>x.id===builder.storeId) || (data.extraStores||[]).find(x=>x.id===builder.storeId);
   return !!(s && s.order && s.order.status==='provisional');
 }
 window.openBuilder = async (storeId,mode,orderId)=>{
-  const priceList = await loadPrices(storeId);
-  if (!priceList) return;
-  builder={storeId,mode,orderId,cart:{},priceList};
+  const r = await loadPrices(storeId);
+  if (!r) return;
+  builder={storeId,mode,orderId,cart:{},giftCart:{},priceList:r.products,giftBag:r.giftBag,giftCup:r.giftCup};
   render();
 };
 window.openEditBuilder = async (storeId,orderId)=>{
   const s = data.stores.find(x=>x.id===storeId) || (data.extraStores||[]).find(x=>x.id===storeId);
-  const cart = {};
-  if (s && s.order) for (const it of s.order.items) cart[it.productId]=it.qty;
-  const priceList = await loadPrices(storeId);
-  if (!priceList) return;
-  builder={storeId,mode:'edit',orderId,cart,priceList};
+  const cart = {}, giftCart = {};
+  if (s && s.order) for (const it of s.order.items){
+    if (it.isGift) giftCart[it.productId]=it.qty; else cart[it.productId]=it.qty;
+  }
+  const r = await loadPrices(storeId);
+  if (!r) return;
+  builder={storeId,mode:'edit',orderId,cart,giftCart,priceList:r.products,giftBag:r.giftBag,giftCup:r.giftCup};
   render();
 };
 window.closeBuilder = ()=>{ builder=null; render(); };
@@ -450,6 +501,9 @@ window.setBQty = (pid,v)=>{ builder.cart[pid]=Math.max(0,Math.floor(Number(v)||0
 
 window.submitBuilder = async ()=>{
   const items = Object.entries(builder.cart).filter(([,q])=>q>0).map(([productId,qty])=>({productId,qty}));
+  for (const [productId,qty] of Object.entries(builder.giftCart||{})) {
+    if (qty>0) items.push({productId,qty,isGift:true});
+  }
   if (!items.length) {
     // 預抓訂單允許全部歸零(代表店家最終不叫貨)
     if (!(builder.mode==="edit" && isProvisional())) return alert("請選擇品項");
