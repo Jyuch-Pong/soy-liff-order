@@ -105,25 +105,36 @@ let deliveryDate = "";
 let groupId = "";
 let editOrderId = ""; // 有值=編輯既有訂單模式
 let viewOrders = false; // true=歷史訂單查詢模式
-let deliveryWeekdays = null; // 該店配送星期[1,4]之類
 let history = null;
+let giftCart = {};  // productId -> 贈品數量
 
 const app = document.getElementById("app");
 
-function weekdayName(dateStr) {
-  return new Intl.DateTimeFormat("zh-TW", { timeZone: "Asia/Taipei", weekday: "short" })
-    .format(new Date(dateStr + "T12:00:00+08:00"));
-}
-function isOffDay(dateStr) {
-  if (!deliveryWeekdays || !dateStr) return false;
-  const wd = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Taipei", weekday: "short" })
-    .format(new Date(dateStr + "T12:00:00+08:00"));
-  const map = { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 };
-  return !deliveryWeekdays.includes(map[wd]);
-}
-
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+
+// 依單位加總,算出可得贈品數
+function giftInfo() {
+  let bagQty = 0, cupQty = 0;
+  for (const p of products) {
+    const q = cart[p.id] || 0;
+    if (!q) continue;
+    if ((p.unit||"").includes("袋")) bagQty += q;
+    else if ((p.unit||"").includes("杯")) cupQty += q;
+  }
+  const bagTh = store.giftBag, cupTh = store.giftCup;
+  const bagGift = (bagTh && bagTh > 0) ? Math.floor(bagQty / bagTh) : 0;
+  const cupGift = (cupTh && cupTh > 0) ? Math.floor(cupQty / cupTh) : 0;
+  // 目前已選的贈品數(依類別)
+  let selBag = 0, selCup = 0;
+  for (const p of products) {
+    const g = giftCart[p.id] || 0;
+    if (!g) continue;
+    if ((p.unit||"").includes("袋")) selBag += g;
+    else if ((p.unit||"").includes("杯")) selCup += g;
+  }
+  return { bagQty, cupQty, bagTh, cupTh, bagGift, cupGift, selBag, selCup };
 }
 
 function cartTotal() {
@@ -174,7 +185,7 @@ function renderHistory() {
             ${statusBadge(o)}
           </div>
           <div style="margin-top:8px">
-            ${o.items.map(it=>`<div style="display:flex;justify-content:space-between;font-size:15px;color:var(--text2);padding:2px 0"><span>${esc(it.name)}</span><span style="font-family:monospace">${it.qty} × $${it.price}</span></div>`).join("")}
+            ${o.items.map(it=>`<div style="display:flex;justify-content:space-between;font-size:15px;color:var(--text2);padding:2px 0"><span>${esc(it.name)}${it.isGift?'<span style="color:#7eb3ff;font-size:13px"> 🎁贈</span>':""}</span><span style="font-family:monospace">${it.qty}${it.isGift?"":` × $${it.price}`}</span></div>`).join("")}
           </div>
           <div style="text-align:right;font-weight:700;margin-top:6px;font-size:17px">$${o.total.toLocaleString()}</div>
         </div>`}).join("")}
@@ -186,27 +197,44 @@ function render() {
   app.innerHTML = `
     <div class="header">
       <div class="code">[${esc(store.code)}]</div>
-      <div class="name">${esc(store.name)}${editOrderId?' <span style="color:var(--amber);font-size:15px">(修改今日訂單)</span>':""}</div>
+      <div class="name">${esc(store.name)}${editOrderId?' <span style="color:var(--amber);font-size:14px">(編輯訂單)</span>':""}</div>
     </div>
-    ${editOrderId?`
-    <div class="section" style="padding-bottom:0">
-      <div style="background:rgba(245,158,11,.12);border:1px solid var(--amber);color:var(--amber);
-                  border-radius:10px;padding:10px 12px;font-size:15px">
-        📝 這天已經有訂單了,以下為目前的訂購內容,直接修改即可(數量改0=取消該品項)
-      </div>
-    </div>`:""}
     <div class="section">
       <div class="date-row">
-        <label>配送日期${editOrderId?'(修改中不可改)':''}</label>
+        <label>配送日期${editOrderId?'(編輯中不可改)':'(預設次日)'}</label>
         <input type="date" id="ddate" value="${deliveryDate}" ${editOrderId?'disabled':''} />
       </div>
-      ${(!editOrderId && isOffDay(deliveryDate)) ? `
-        <div style="background:rgba(245,158,11,.12);border:1px solid var(--amber);color:var(--amber);
-                    border-radius:10px;padding:10px 12px;margin-top:8px;font-size:15px">
-          ⚠️ ${deliveryDate.slice(5).replace("-","/")}(${weekdayName(deliveryDate)})不是貴店的固定配送日<br/>
-          <span style="font-size:14px">固定配送:${store.dayGroup||"未設定"};如需此日配送請與我們確認</span>
-        </div>` : ""}
     </div>
+    ${(()=>{
+      const g = giftInfo();
+      if (!g.bagGift && !g.cupGift) return "";
+      const rows = [];
+      if (g.bagGift) rows.push({cls:"袋", label:"袋裝", got:g.bagGift, sel:g.selBag});
+      if (g.cupGift) rows.push({cls:"杯", label:"杯裝", got:g.cupGift, sel:g.selCup});
+      return `<div class="section" style="padding-bottom:0">
+        <div style="background:rgba(59,130,246,.10);border:1px solid #3b82f6;border-radius:12px;padding:12px 14px">
+          <b style="color:#7eb3ff">🎁 搭贈</b>
+          ${rows.map(r=>`
+            <div style="margin-top:8px;font-size:16px">
+              ${r.label}滿 ${r.cls==="袋"?g.bagTh:g.cupTh} 可送 <b style="color:#7eb3ff">${r.got}</b> ${r.cls}
+              ${r.sel<r.got?`<span style="color:var(--amber);font-size:15px">(還可選 ${r.got-r.sel} ${r.cls})</span>`
+                          :`<span style="color:var(--green);font-size:15px">✓ 已選滿</span>`}
+            </div>
+            <div style="margin-top:6px">
+              ${products.filter(p=>(p.unit||"").includes(r.cls)).map(p=>{
+                const gq = giftCart[p.id]||0;
+                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0">
+                  <span style="font-size:16px">${esc(p.name)}</span>
+                  <span style="display:flex;align-items:center;gap:8px">
+                    <button onclick="chgGift('${p.id}',-1,'${r.cls}')" style="width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:18px">−</button>
+                    <span style="min-width:24px;text-align:center;font-family:monospace;font-size:18px;color:${gq?'#7eb3ff':'var(--text3)'}">${gq}</span>
+                    <button onclick="chgGift('${p.id}',1,'${r.cls}')" style="width:34px;height:34px;border-radius:50%;border:1px solid #3b82f6;background:rgba(59,130,246,.2);color:#7eb3ff;font-size:18px">＋</button>
+                  </span>
+                </div>`}).join("")}
+            </div>`).join("")}
+        </div>
+      </div>`;
+    })()}
     <div class="section" style="padding-top:0">
       ${products.map(p => `
         <div class="product ${p.unit.includes('袋')?'bag':p.unit.includes('杯')?'cup':''}">
@@ -231,12 +259,22 @@ function render() {
   `;
   document.getElementById("ddate").addEventListener("change", (e) => {
     deliveryDate = e.target.value;
-    render(); // 重新繪製以更新非配送日提醒
   });
 }
 
 window.chg = function (pid, d) {
   cart[pid] = Math.max(0, (cart[pid] || 0) + d);
+  render();
+};
+
+window.chgGift = function (pid, d, cls) {
+  const g = giftInfo();
+  const max = cls === "袋" ? g.bagGift : g.cupGift;
+  const sel = cls === "袋" ? g.selBag : g.selCup;
+  const cur = giftCart[pid] || 0;
+  if (d > 0 && sel >= max) { alert(`${cls}裝贈品最多 ${max} ${cls}`); return; }
+  giftCart[pid] = Math.max(0, cur + d);
+  if (!giftCart[pid]) delete giftCart[pid];
   render();
 };
 
@@ -253,6 +291,21 @@ window.submitOrder = async function () {
   const items = Object.entries(cart)
     .filter(([, q]) => q > 0)
     .map(([productId, quantity]) => ({ productId, quantity }));
+  for (const [productId, quantity] of Object.entries(giftCart)) {
+    if (quantity > 0) items.push({ productId, quantity, isGift: true });
+  }
+  // 提醒但不強制:湊滿卻沒選滿贈品
+  const gi = giftInfo();
+  if ((gi.bagGift > gi.selBag) || (gi.cupGift > gi.selCup)) {
+    const parts = [];
+    if (gi.bagGift > gi.selBag) parts.push(`袋裝還可選 ${gi.bagGift - gi.selBag} 袋`);
+    if (gi.cupGift > gi.selCup) parts.push(`杯裝還可選 ${gi.cupGift - gi.selCup} 杯`);
+    if (!confirm(`您有贈品尚未選擇(${parts.join("、")}),確定直接送出?`)) {
+      btn.disabled = false;
+      btn.textContent = "送出訂單";
+      return;
+    }
+  }
 
   try {
     const res = await fetch(API_URL, {
@@ -312,7 +365,6 @@ window.submitOrder = async function () {
     if (!res.ok) throw new Error(data.error || "載入失敗");
 
     store = data.store;
-    deliveryWeekdays = data.deliveryWeekdays || null;
     if (viewOrders) {
       history = data.history;
       renderHistory();
@@ -321,10 +373,11 @@ window.submitOrder = async function () {
     products = data.products;
     if (data.editOrder) {
       // 編輯模式:帶入原訂單品項與配送日,日期鎖定不可改
-      // 關鍵:記下訂單ID,送出時才會走「更新既有訂單」而非建立新訂單
-      editOrderId = data.editOrder.id;
       deliveryDate = data.editOrder.deliveryDate;
-      for (const it of data.editOrder.items) cart[it.productId] = it.quantity;
+      for (const it of data.editOrder.items) {
+        if (it.isGift) giftCart[it.productId] = it.quantity;
+        else cart[it.productId] = it.quantity;
+      }
     } else {
       editOrderId = "";
       deliveryDate = data.defaultDeliveryDate;
