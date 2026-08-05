@@ -291,11 +291,9 @@ async function loadTab(){
       const pList = filterStores(stores, pRoute, pDay, "");
       if (!pList.find(s=>s.id===selStore)) selStore = pList.length ? pList[0].id : "";
       const cp = selStore ? await api("custom_prices",{params:{storeId:selStore}}) : [];
-      customPrices = Object.fromEntries(cp.map(c=>[c.product_id, c]));
+      customPrices = Object.fromEntries(cp.map(c=>[c.product_id, c.custom_price]));
       const customCount = Object.keys(customPrices).length;
-      const hasSet = (pid)=>customPrices[pid]!=null;
-      const cpVal = (pid)=>customPrices[pid]?.custom_price ?? "";
-      const cpFree = (pid)=>customPrices[pid]?.free_threshold ?? "";
+      const curStore = stores.find(s=>s.id===selStore);
       c.innerHTML = `
         <div class="card">
           <div class="row" style="margin-bottom:8px">
@@ -318,22 +316,34 @@ async function loadTab(){
             </label>
           </div>`:""}
         </div>
+        ${selStore?`<div class="card">
+          <b>🎁 搭贈設定</b>
+          <div class="dim" style="font-size:14px;margin:4px 0 8px">填數字啟用(如填10=每買10袋送1);留空=此店無搭贈。下單時湊滿數量會提示選贈品品項。</div>
+          <div class="row" style="margin-bottom:0">
+            <span class="utag bag">袋</span>
+            <span>每買</span>
+            <input type="number" id="gbag" value="${curStore?.gift_bag_threshold ?? ""}" ${locked?"readonly":""} placeholder="—" style="width:70px;text-align:center;font-size:17px"/>
+            <span>送 1</span>
+            <span style="margin-left:16px" class="utag cup">杯</span>
+            <span>每買</span>
+            <input type="number" id="gcup" value="${curStore?.gift_cup_threshold ?? ""}" ${locked?"readonly":""} placeholder="—" style="width:70px;text-align:center;font-size:17px"/>
+            <span>送 1</span>
+            ${locked?'<span class="dim" style="font-size:14px">🔒 解鎖後可修改</span>':`<button class="btn" onclick="saveGift()">儲存</button>`}
+          </div>
+        </div>`:""}
         <div class="card"><table>
-          <tr><th>商品</th><th style="text-align:right">基礎價</th><th style="text-align:right">此店價格</th><th style="text-align:center">買N送1</th><th></th></tr>
-          ${products.filter(p=>p.is_active && (!pOnlyCustom || hasSet(p.id))).map(p=>{
-            const has = hasSet(p.id);
-            const hasPrice = cpVal(p.id)!=="" && cpVal(p.id)!=null;
-            const hasFree = cpFree(p.id)!=="" && cpFree(p.id)!=null;
+          <tr><th>商品</th><th style="text-align:right">基礎價</th><th style="text-align:right">此店價格(留空=用基礎價)</th><th></th></tr>
+          ${products.filter(p=>p.is_active && (!pOnlyCustom || customPrices[p.id]!=null)).map(p=>{
+            const has = customPrices[p.id]!=null;
             const ucls = p.unit.includes('袋')?'bag':p.unit.includes('杯')?'cup':'other';
             return `<tr>
               <td style="font-size:17px"><span class="utag ${ucls}">${esc(p.unit)}</span>${esc(p.name)}</td>
               <td style="text-align:right;font-size:17px" class="dim mono">$${p.base_price}</td>
-              <td style="text-align:right"><input type="number" id="cp_${p.id}" value="${hasPrice?cpVal(p.id):""}" placeholder="${p.base_price}" style="width:90px;text-align:right;font-size:17px;${hasPrice?'border-color:var(--amber);color:var(--amber)':''}"/></td>
-              <td style="text-align:center"><input type="number" id="cf_${p.id}" value="${hasFree?cpFree(p.id):""}" placeholder="—" title="填10=買10送1" style="width:64px;text-align:center;font-size:17px;${hasFree?'border-color:#60a5fa;color:#60a5fa':''}"/></td>
+              <td style="text-align:right"><input type="number" id="cp_${p.id}" value="${has?customPrices[p.id]:""}" placeholder="${p.base_price}" style="width:96px;text-align:right;font-size:17px;${has?'border-color:var(--amber);color:var(--amber)':''}"/></td>
               <td><button class="btn2" onclick="saveCP('${p.id}')">儲存</button></td>
             </tr>`}).join("")}
         </table></div>
-        <div class="dim" style="font-size:14px">※ 此店價格留空=用基礎價;「買N送1」填數字(如填10=買10送1,留空=無贈品),贈品不計價但司機備貨會自動加上</div>`;
+`;
     }
 
     // ============ 換貨 ============
@@ -586,10 +596,19 @@ window.deleteProduct = async (id,name)=>{
   if (!confirm(`確定要永久刪除商品「${name}」?此動作無法復原`)) return;
   try{ await api("delete_product",{body:{id}}); loadTab(); }catch(e){alert(e.message)}
 };
+window.saveGift = async ()=>{
+  const bag = document.getElementById("gbag").value.trim();
+  const cup = document.getElementById("gcup").value.trim();
+  try {
+    await api("update_store",{body:{id:selStore,
+      gift_bag_threshold: bag===""?null:Number(bag),
+      gift_cup_threshold: cup===""?null:Number(cup)}});
+    loadTab();
+  } catch(e){ alert("儲存失敗:"+e.message); }
+};
 window.saveCP = async (pid)=>{
   const v = document.getElementById("cp_"+pid).value.trim();
-  const f = document.getElementById("cf_"+pid).value.trim();
-  await api("set_custom_price",{body:{storeId:selStore,productId:pid,price:v,freeThreshold:f}});
+  await api("set_custom_price",{body:{storeId:selStore,productId:pid,price:v}});
   loadTab();
 };
 window.cancelOrder = async (id)=>{
