@@ -223,6 +223,7 @@ async function loadTab(){
             <input id="ns_code" placeholder="店號 如A-001" style="width:110px"/>
             <input id="ns_name" placeholder="店名" style="width:130px"/>
             <input id="ns_addr" placeholder="地址" style="width:180px"/>
+            <input id="ns_note" placeholder="備註(選填)" style="width:160px"/>
             <select id="ns_route" style="width:70px"><option value="">路線</option>${ROUTE_CODES.map(r=>`<option>${r}</option>`).join("")}</select>
             <select id="ns_dg" style="width:80px"><option value="">梯次</option>${DAY_GROUPS.map(d=>`<option>${d}</option>`).join("")}</select>
             <button class="btn" onclick="createStore()">新增</button>
@@ -235,6 +236,7 @@ async function loadTab(){
             <td>
               <input value="${esc(s.name)}" ${locked?"readonly":""} style="width:130px;font-size:15px" onchange="updStoreField('${s.id}','name',this.value)"/>
               <div style="margin-top:3px"><input value="${esc(s.address||"")}" ${locked?"readonly":""} placeholder="地址" style="width:170px;font-size:13px" onchange="updStoreField('${s.id}','address',this.value)"/></div>
+              <div style="margin-top:3px"><input value="${esc(s.note||"")}" ${locked?"readonly":""} placeholder="備註(司機端顯示)" style="width:220px;font-size:13px;${s.note?'color:var(--amber)':''}" onchange="updStoreField('${s.id}','note',this.value)"/></div>
             </td>
             <td class="dim">${esc(s.route_code||"-")} · ${esc(s.day_group||"-")}</td>
             <td>${s.line_group_id?'<span class="green">已綁定</span>':'<span class="dim">未綁定</span>'}</td>
@@ -549,7 +551,7 @@ window.setP = (k,v)=>{
 window.createStore = async ()=>{
   const g = id=>document.getElementById(id).value.trim();
   try{
-    await api("create_store",{body:{store_code:g("ns_code"),name:g("ns_name"),address:g("ns_addr"),route_code:g("ns_route"),day_group:g("ns_dg")}});
+    await api("create_store",{body:{store_code:g("ns_code"),name:g("ns_name"),address:g("ns_addr"),route_code:g("ns_route"),day_group:g("ns_dg"),note:g("ns_note")}});
     loadTab();
   }catch(e){alert(e.message)}
 };
