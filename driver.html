@@ -224,6 +224,7 @@ function render(){
     </div>
     <div class="wrap">
       ${renderTotals()}
+      ${renderGifts()}
       ${renderDiscounts()}
       ${(data.extraStores&&data.extraStores.length)?`
         <div class="card" style="border-color:var(--amber)">
@@ -252,6 +253,31 @@ function renderTotals(){
               <div class="tsub">${b.sub?esc(b.sub)+" · ":""}${t.storeCount} 間店</div>
             </div>`}).join("")}
         </div>
+      </details>
+    </div>`;
+}
+
+function renderGifts(){
+  if (!data.gifts || !data.gifts.length) return "";
+  const totalQty = data.gifts.reduce((s,g)=>s+g.qty,0);
+  return `
+    <div class="card" style="border-color:#3b82f6">
+      <details open>
+        <summary style="display:flex;justify-content:space-between;align-items:center">
+          <b style="color:#7eb3ff">🎁 今日搭贈</b>
+          <b style="color:#7eb3ff;font-size:18px">共 ${totalQty} 份</b>
+        </summary>
+        <div class="tgrid">
+          ${data.gifts.map(g=>{
+            const c = unitClass(g.unit);
+            const b = toBasket(g.qty, g.unit);
+            return `<div class="tbox ${c}" style="border-color:rgba(59,130,246,.5)">
+              <div class="tname">${esc(g.name)}</div>
+              <div class="tqty" style="color:#7eb3ff">${b.main}${b.sub?"":`<span style="font-size:15px;font-weight:600"> ${esc(g.unit)}</span>`}</div>
+              <div class="tsub">${b.sub?esc(b.sub)+" · ":""}${g.storeCount} 間店</div>
+            </div>`}).join("")}
+        </div>
+        <div class="dim" style="font-size:13px;margin-top:8px">※ 搭贈品項不計金額,已計入當日備貨總量</div>
       </details>
     </div>`;
 }
