@@ -499,7 +499,9 @@ window.closeBuilder = ()=>{ builder=null; render(); };
 window.chgQty = (pid,d)=>{ builder.cart[pid]=Math.max(0,(builder.cart[pid]||0)+d); render(); };
 window.setBQty = (pid,v)=>{ builder.cart[pid]=Math.max(0,Math.floor(Number(v)||0)); render(); };
 
+let submitting = false; // 防連點重複送出
 window.submitBuilder = async ()=>{
+  if (submitting) return;
   const items = Object.entries(builder.cart).filter(([,q])=>q>0).map(([productId,qty])=>({productId,qty}));
   for (const [productId,qty] of Object.entries(builder.giftCart||{})) {
     if (qty>0) items.push({productId,qty,isGift:true});
@@ -509,6 +511,12 @@ window.submitBuilder = async ()=>{
     if (!(builder.mode==="edit" && isProvisional())) return alert("請選擇品項");
     if (!confirm("全部歸零將取消此筆預抓,確定?")) return;
   }
+  submitting = true;
+  // 按鈕即時變灰,避免視覺上還能按
+  const btns = document.querySelectorAll(".rowbtns button");
+  btns.forEach(b=>{ b.disabled = true; });
+  const submitBtn = btns[btns.length-1];
+  if (submitBtn) submitBtn.textContent = "送出中…";
   try {
     if (builder.mode==="new" || builder.mode==="pre"){
       await api("create_onsite",{body:{storeId:builder.storeId,date:viewDate,items,provisional:builder.mode==="pre"}});
@@ -520,12 +528,21 @@ window.submitBuilder = async ()=>{
     const sid = builder.storeId;
     builder=null;
     load(sid);
-  } catch(e){ alert(e.message); }
+  } catch(e){
+    alert(e.message);
+    render(); // 還原按鈕狀態
+  } finally {
+    submitting = false;
+  }
 };
 
 window.markDelivered = async (orderId, storeId)=>{
+  if (submitting) return;
   if (!confirm("確認此店已送達?")) return;
-  try { await api("mark_delivered",{body:{orderId}}); load(storeId); } catch(e){ alert(e.message); }
+  submitting = true;
+  try { await api("mark_delivered",{body:{orderId}}); load(storeId); }
+  catch(e){ alert(e.message); }
+  finally { submitting = false; }
 };
 
 window.openExchange = async (storeId)=>{
@@ -567,16 +584,19 @@ window.openExchange = async (storeId)=>{
 };
 window.closeExchange = ()=>{ const m=document.getElementById("exModal"); if(m)m.innerHTML=""; };
 window.submitExchange = async (storeId)=>{
+  if (submitting) return;
   const productId = document.getElementById("ex_pid").value;
   const returned = document.getElementById("ex_ret").value;
   const replaced = document.getElementById("ex_rep").value;
   const note = document.getElementById("ex_note").value;
   if (Number(returned)<=0 && Number(replaced)<=0) return alert("請填寫回收或補貨數量");
+  submitting = true;
   try {
     await api("add_exchange",{body:{storeId,productId,date:viewDate,returned,replaced,note}});
     closeExchange();
     load(storeId);
   } catch(e){ alert("登記失敗:"+e.message); }
+  finally { submitting = false; }
 };
 
 // ====== 記住目前檢視位置(手機瀏覽器閒置後重新載入仍能回到原處) ======
