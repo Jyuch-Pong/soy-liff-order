@@ -283,7 +283,9 @@ window.setQty = function (pid, v) {
   render();
 };
 
+let submitting = false; // 防連點重複送出
 window.submitOrder = async function () {
+  if (submitting) return;
   const btn = document.getElementById("submitBtn");
   btn.disabled = true;
   btn.textContent = "送出中…";
@@ -307,6 +309,7 @@ window.submitOrder = async function () {
     }
   }
 
+  submitting = true;
   try {
     const res = await fetch(API_URL, {
       method: "POST",
@@ -334,6 +337,8 @@ window.submitOrder = async function () {
     alert("下單失敗:" + e.message);
     btn.disabled = false;
     btn.textContent = "送出訂單";
+  } finally {
+    submitting = false;
   }
 };
 
