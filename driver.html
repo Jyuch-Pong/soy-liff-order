@@ -368,6 +368,7 @@ function renderStore(s, isExtra, isAdhoc){
           ${isExtra?`<span class="badge b-amber" style="margin-left:4px">梯次 ${esc(s.day_group||"?")}</span>`:""}
           ${isAdhoc?(s.isTemp?'<span class="badge" style="color:#c084fc;border-color:#c084fc;margin-left:4px">臨時店家</span>'
                               :`<span class="badge" style="color:#c084fc;border-color:#c084fc;margin-left:4px">原${esc(s.homeRoute||"其他路線")}</span>`):""}
+          ${isAdhoc&&s.assignedTo?`<div style="font-size:14px;color:#c084fc;margin-top:3px">🚚 今日由 <b>${esc(s.assignedTo)}</b> 配送</div>`:""}
           ${s.address?`<a class="addr navlink" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s.address)}" target="_blank" rel="noopener">📍 ${esc(s.address)} <span style="font-size:13px">▸導航</span></a>`:""}
           ${s.note?`<div class="addr" style="color:var(--amber)">📝 ${esc(s.note)}</div>`:""}
         </div>
@@ -453,6 +454,12 @@ function renderBuilder(s){
   return `
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
       <b style="font-size:15px">${builder.mode==='addon'?'追加品項':builder.mode==='edit'?(isProvisional()?'調整預抓數量(全部歸0=店家不叫貨)':'編輯訂單(數量歸0=移除該品項)'):builder.mode==='pre'?'預抓數量(計入當日總計,到現場再調整)':'建立訂單'}</b>
+      ${(builder.mode==='new'||builder.mode==='pre')?`
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0;padding:8px 10px;background:var(--bg);border-radius:8px">
+          <span class="dim" style="font-size:15px">配送日期</span>
+          <input type="date" value="${builder.date||viewDate}" onchange="setBuilderDate(this.value)"
+            style="font-size:16px;padding:6px 10px"/>
+        </div>`:""}
       ${builder.priceList.map(p=>{
         const q = builder.cart[p.id]||0;
         const ucls = p.unit.includes('袋')?'bag':p.unit.includes('杯')?'cup':'other';
@@ -520,6 +527,7 @@ function bGiftInfo(){
     bagGift: (bagTh&&bagTh>0)?Math.floor(bagQty/bagTh):0,
     cupGift: (cupTh&&cupTh>0)?Math.floor(cupQty/cupTh):0 };
 }
+window.setBuilderDate = (val)=>{ if(builder) builder.date = val; render(); };
 window.chgBGift = (pid,d,cls)=>{
   const g = bGiftInfo();
   const max = cls==="袋"?g.bagGift:g.cupGift;
@@ -536,10 +544,11 @@ function isProvisional(){
   const s = findStore(builder.storeId);
   return !!(s && s.order && s.order.status==='provisional');
 }
-window.openBuilder = async (storeId,mode,orderId)=>{
+window.openBuilder = async (storeId,mode,orderId,assignSelf)=>{
   const r = await loadPrices(storeId);
   if (!r) return;
-  builder={storeId,mode,orderId,cart:{},giftCart:{},priceList:r.products,giftBag:r.giftBag,giftCup:r.giftCup};
+  builder={storeId,mode,orderId,cart:{},giftCart:{},priceList:r.products,
+           giftBag:r.giftBag,giftCup:r.giftCup,date:viewDate,assignSelf:!!assignSelf};
   render();
 };
 window.openEditBuilder = async (storeId,orderId)=>{
@@ -577,7 +586,11 @@ window.submitBuilder = async ()=>{
   if (submitBtn) submitBtn.textContent = "送出中…";
   try {
     if (builder.mode==="new" || builder.mode==="pre"){
-      await api("create_onsite",{body:{storeId:builder.storeId,date:viewDate,items,provisional:builder.mode==="pre"}});
+      await api("create_onsite",{body:{
+        storeId:builder.storeId, date:builder.date||viewDate, items,
+        provisional:builder.mode==="pre",
+        assignSelf: !!builder.assignSelf,   // 臨時加店→指派給自己配送
+      }});
     } else if (builder.mode==="edit"){
       await api("edit_order",{body:{orderId:builder.orderId,storeId:builder.storeId,items}});
     } else {
@@ -652,7 +665,7 @@ window.searchStore = (kw)=>{
 
 window.pickStore = async (storeId)=>{
   closeAddStore();
-  await openBuilder(storeId,'new');
+  await openBuilder(storeId,'new',null,true);
 };
 
 window.createTempStore = async ()=>{
@@ -666,7 +679,7 @@ window.createTempStore = async ()=>{
     const r = await api("create_temp_store",{body:{name,address,phone}});
     closeAddStore();
     submitting = false;
-    await openBuilder(r.store.id,'new');
+    await openBuilder(r.store.id,'new',null,true);
   } catch(e){ alert("新增失敗:"+e.message); submitting = false; }
 };
 
