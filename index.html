@@ -107,8 +107,21 @@ let editOrderId = ""; // 有值=編輯既有訂單模式
 let viewOrders = false; // true=歷史訂單查詢模式
 let history = null;
 let giftCart = {};  // productId -> 贈品數量
+let deliveryWeekdays = null; // 該店固定配送星期,如[1,4]
 
 const app = document.getElementById("app");
+
+function weekdayName(dateStr) {
+  return new Intl.DateTimeFormat("zh-TW", { timeZone: "Asia/Taipei", weekday: "short" })
+    .format(new Date(dateStr + "T12:00:00+08:00"));
+}
+function isOffDay(dateStr) {
+  if (!deliveryWeekdays || !dateStr) return false;
+  const wd = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Taipei", weekday: "short" })
+    .format(new Date(dateStr + "T12:00:00+08:00"));
+  const map = { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 };
+  return !deliveryWeekdays.includes(map[wd]);
+}
 
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
@@ -197,13 +210,26 @@ function render() {
   app.innerHTML = `
     <div class="header">
       <div class="code">[${esc(store.code)}]</div>
-      <div class="name">${esc(store.name)}${editOrderId?' <span style="color:var(--amber);font-size:14px">(編輯訂單)</span>':""}</div>
+      <div class="name">${esc(store.name)}${editOrderId?' <span style="color:var(--amber);font-size:15px">(修改今日訂單)</span>':""}</div>
     </div>
+    ${editOrderId?`
+    <div class="section" style="padding-bottom:0">
+      <div style="background:rgba(245,158,11,.12);border:1px solid var(--amber);color:var(--amber);
+                  border-radius:10px;padding:10px 12px;font-size:15px">
+        📝 這天已經有訂單了,以下為目前的訂購內容,直接修改即可(數量改0=取消該品項)
+      </div>
+    </div>`:""}
     <div class="section">
       <div class="date-row">
-        <label>配送日期${editOrderId?'(編輯中不可改)':'(預設次日)'}</label>
+        <label>配送日期${editOrderId?'(修改中不可改)':''}</label>
         <input type="date" id="ddate" value="${deliveryDate}" ${editOrderId?'disabled':''} />
       </div>
+      ${(!editOrderId && isOffDay(deliveryDate)) ? `
+        <div style="background:rgba(245,158,11,.12);border:1px solid var(--amber);color:var(--amber);
+                    border-radius:10px;padding:10px 12px;margin-top:8px;font-size:15px">
+          ⚠️ ${deliveryDate.slice(5).replace("-","/")}(${weekdayName(deliveryDate)})不是貴店的固定配送日<br/>
+          <span style="font-size:14px">固定配送:${store.dayGroup||"未設定"};如需此日配送請與我們確認</span>
+        </div>` : ""}
     </div>
     ${(()=>{
       const g = giftInfo();
@@ -259,6 +285,7 @@ function render() {
   `;
   document.getElementById("ddate").addEventListener("change", (e) => {
     deliveryDate = e.target.value;
+    render(); // 重繪以更新非配送日提醒
   });
 }
 
@@ -370,6 +397,7 @@ window.submitOrder = async function () {
     if (!res.ok) throw new Error(data.error || "載入失敗");
 
     store = data.store;
+    deliveryWeekdays = data.deliveryWeekdays || null;
     if (viewOrders) {
       history = data.history;
       renderHistory();
@@ -377,6 +405,8 @@ window.submitOrder = async function () {
     }
     products = data.products;
     if (data.editOrder) {
+      // 關鍵:記下訂單ID,送出時才會走「更新既有訂單」而非建立新訂單
+      editOrderId = data.editOrder.id;
       // 編輯模式:帶入原訂單品項與配送日,日期鎖定不可改
       deliveryDate = data.editOrder.deliveryDate;
       for (const it of data.editOrder.items) {
