@@ -56,6 +56,12 @@
   .tbox.bag .tqty{color:#7eb3ff} .tbox.cup .tqty{color:#ffb27d} .tbox.other .tqty{color:var(--text)}
   .tbox .tsub{font-size:13px;color:var(--text3);margin-top:2px}
   .tbox .exsplit{font-size:13px;color:#c084fc;margin-top:4px;padding-top:4px;border-top:1px dashed rgba(192,132,252,.4)}
+  .revbox{background:var(--card);border:2px solid var(--green-d);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+  .revrow{display:flex;justify-content:space-between;align-items:baseline;padding:4px 0}
+  .revrow .lbl{font-size:15px;color:var(--text2)}
+  .revrow .amt{font-family:monospace;font-size:22px;font-weight:800}
+  .revrow .cnt{font-size:14px;color:var(--text3);margin-left:6px;font-weight:400}
+  .revtotal{border-top:1px solid var(--border);margin-top:6px;padding-top:8px}
   .addbtn{width:100%;padding:12px;border-radius:12px;border:1px dashed var(--border);background:none;color:var(--text2);font-size:16px;margin-bottom:10px}
   .srow{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #2a2d30;font-size:16px}
   .srow:active{background:rgba(255,255,255,.05)}
@@ -83,6 +89,12 @@
   .tbox.bag .tqty{color:#7eb3ff} .tbox.cup .tqty{color:#ffb27d} .tbox.other .tqty{color:var(--text)}
   .tbox .tsub{font-size:13px;color:var(--text3);margin-top:2px}
   .tbox .exsplit{font-size:13px;color:#c084fc;margin-top:4px;padding-top:4px;border-top:1px dashed rgba(192,132,252,.4)}
+  .revbox{background:var(--card);border:2px solid var(--green-d);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+  .revrow{display:flex;justify-content:space-between;align-items:baseline;padding:4px 0}
+  .revrow .lbl{font-size:15px;color:var(--text2)}
+  .revrow .amt{font-family:monospace;font-size:22px;font-weight:800}
+  .revrow .cnt{font-size:14px;color:var(--text3);margin-left:6px;font-weight:400}
+  .revtotal{border-top:1px solid var(--border);margin-top:6px;padding-top:8px}
   .addbtn{width:100%;padding:12px;border-radius:12px;border:1px dashed var(--border);background:none;color:var(--text2);font-size:16px;margin-bottom:10px}
   .srow{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #2a2d30;font-size:16px}
   .srow:active{background:rgba(255,255,255,.05)}
@@ -231,6 +243,7 @@ function render(){
       <span class="green" style="font-weight:700">${done}/${data.stores.length} 已下單</span>
     </div>
     <div class="wrap">
+      ${renderRevenue()}
       ${(builder && !findStore(builder.storeId)) ? `
         <div class="scard s-red" style="border-color:#c084fc">
           <div><b>➕ 臨時加店建單</b></div>
@@ -254,6 +267,26 @@ function render(){
       <button class="addbtn" onclick="openAddStore()">➕ 臨時加店(代跑/新客戶)</button>
       ${data.stores.length===0?'<div class="card dim">此日期無配送店家</div>':""}
       ${data.stores.map(s=>renderStore(s,false)).join("")}
+    </div>`;
+}
+
+function renderRevenue(){
+  const r = data.revenue;
+  if (!r || (!r.total && !r.deliveredStores && !r.pendingStores)) return "";
+  return `
+    <div class="revbox">
+      <div class="revrow">
+        <span class="lbl">✅ 已送達<span class="cnt">${r.deliveredStores} 間</span></span>
+        <span class="amt green">$${r.delivered.toLocaleString()}</span>
+      </div>
+      <div class="revrow">
+        <span class="lbl">⏳ 未送達<span class="cnt">${r.pendingStores} 間</span></span>
+        <span class="amt" style="color:var(--text2)">$${r.pending.toLocaleString()}</span>
+      </div>
+      <div class="revrow revtotal">
+        <span class="lbl" style="font-weight:700;color:var(--text)">今日合計<span class="cnt">${r.deliveredStores + r.pendingStores} 間</span></span>
+        <span class="amt" style="font-size:24px">$${r.total.toLocaleString()}</span>
+      </div>
     </div>`;
 }
 
