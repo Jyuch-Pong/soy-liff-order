@@ -507,25 +507,23 @@ function renderBuilder(s){
         </div>`}).join("")}
       ${(()=>{
         const g = bGiftInfo();
-        if (!g.bagGift && !g.cupGift) return "";
-        const rows = [];
-        if (g.bagGift) rows.push({cls:"袋",th:g.bagTh,got:g.bagGift,sel:g.selBag});
-        if (g.cupGift) rows.push({cls:"杯",th:g.cupTh,got:g.cupGift,sel:g.selCup});
+        if (!g.totalAllow) return "";
+        const pn = (id)=>{ const p=builder.priceList.find(x=>x.id===id); return p?p.name:"?"; };
+        const pu = (id)=>{ const p=builder.priceList.find(x=>x.id===id); return p?p.unit:""; };
         return `<div style="margin-top:10px;padding:10px;border:1px solid #3b82f6;border-radius:10px;background:rgba(59,130,246,.10)">
           <b style="color:#7eb3ff;font-size:15px">🎁 搭贈</b>
-          ${rows.map(r=>`
-            <div style="font-size:15px;margin-top:6px">滿${r.th}${r.cls} 可送 <b style="color:#7eb3ff">${r.got}</b>${r.cls}
-              ${r.sel<r.got?`<span class="amber">(還可選${r.got-r.sel})</span>`:'<span class="green">✓</span>'}</div>
-            ${builder.priceList.filter(p=>(p.unit||"").includes(r.cls)).map(p=>{
-              const gq = builder.giftCart[p.id]||0;
-              return `<div class="qtyrow" style="padding:3px 0">
-                <span style="font-size:15px">${esc(p.name)}</span>
-                <div class="ctrl">
-                  <button onclick="chgBGift('${p.id}',-1,'${r.cls}')">−</button>
-                  <span style="min-width:24px;text-align:center;font-family:monospace;font-size:16px;color:${gq?'#7eb3ff':'var(--text3)'}">${gq}</span>
-                  <button onclick="chgBGift('${p.id}',1,'${r.cls}')" style="background:rgba(59,130,246,.25);border-color:#3b82f6;color:#7eb3ff">＋</button>
-                </div>
-              </div>`}).join("")}`).join("")}
+          ${Object.entries(g.allow).map(([pid,n])=>{
+            const sel = g.selected[pid]||0;
+            return `<div style="font-size:15px;margin-top:6px">可送 <b style="color:#7eb3ff">${esc(pn(pid))}</b> ${n}
+              ${sel<n?`<span class="amber">(還可拿${n-sel})</span>`:'<span class="green">✓</span>'}</div>
+            <div class="qtyrow" style="padding:3px 0">
+              <span style="font-size:15px">${esc(pn(pid))} <span class="dim" style="font-size:14px">${esc(pu(pid))}</span></span>
+              <div class="ctrl">
+                <button onclick="chgBGift('${pid}',-1)">−</button>
+                <span style="min-width:24px;text-align:center;font-family:monospace;font-size:16px;color:${sel?'#7eb3ff':'var(--text3)'}">${sel}</span>
+                <button onclick="chgBGift('${pid}',1)" style="background:rgba(59,130,246,.25);border-color:#3b82f6;color:#7eb3ff">＋</button>
+              </div>
+            </div>`}).join("")}
         </div>`;
       })()}
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--border);margin-top:6px">
@@ -544,29 +542,28 @@ window.chgDate = (v)=>{ viewDate=v; builder=null; sessionStorage.removeItem("dri
 async function loadPrices(storeId){
   try {
     const r = await api("store_prices",{params:{storeId}});
-    return Array.isArray(r) ? { products:r, giftBag:null, giftCup:null } : r;
+    return Array.isArray(r) ? { products:r, giftRules:[] } : r;
   } catch(e){ alert("載入價格失敗:"+e.message); return null; }
 }
 function bGiftInfo(){
-  let bagQty=0, cupQty=0, selBag=0, selCup=0;
-  for (const p of builder.priceList){
-    const q = builder.cart[p.id]||0, g = builder.giftCart[p.id]||0;
-    const u = p.unit||"";
-    if (u.includes("袋")){ bagQty+=q; selBag+=g; }
-    else if (u.includes("杯")){ cupQty+=q; selCup+=g; }
+  const allow = {};
+  for (const r of (builder.giftRules||[])) {
+    const bought = builder.cart[r.buyProductId] || 0;
+    if (!r.buyQty || r.buyQty <= 0) continue;
+    const n = Math.floor(bought / r.buyQty);
+    if (n > 0) allow[r.giftProductId] = (allow[r.giftProductId]||0) + n;
   }
-  const bagTh = builder.giftBag, cupTh = builder.giftCup;
-  return { bagTh, cupTh, selBag, selCup,
-    bagGift: (bagTh&&bagTh>0)?Math.floor(bagQty/bagTh):0,
-    cupGift: (cupTh&&cupTh>0)?Math.floor(cupQty/cupTh):0 };
+  const selected = {};
+  for (const [pid,q] of Object.entries(builder.giftCart||{})) if (q>0) selected[pid]=q;
+  const totalAllow = Object.values(allow).reduce((s,n)=>s+n,0);
+  const totalSel = Object.values(selected).reduce((s,n)=>s+n,0);
+  return { allow, selected, totalAllow, totalSel };
 }
-window.setBuilderDate = (val)=>{ if(builder) builder.date = val; render(); };
-window.chgBGift = (pid,d,cls)=>{
+window.chgBGift = (pid,d)=>{
   const g = bGiftInfo();
-  const max = cls==="袋"?g.bagGift:g.cupGift;
-  const sel = cls==="袋"?g.selBag:g.selCup;
-  const cur = builder.giftCart[pid]||0;
-  if (d>0 && sel>=max) return alert(`${cls}裝贈品最多 ${max}`);
+  const max = g.allow[pid] || 0;
+  const cur = builder.giftCart[pid] || 0;
+  if (d>0 && cur>=max) return alert(`此品項最多可拿 ${max} 個`);
   builder.giftCart[pid] = Math.max(0, cur+d);
   if (!builder.giftCart[pid]) delete builder.giftCart[pid];
   render();
@@ -581,7 +578,8 @@ window.openBuilder = async (storeId,mode,orderId,assignSelf)=>{
   const r = await loadPrices(storeId);
   if (!r) return;
   builder={storeId,mode,orderId,cart:{},giftCart:{},priceList:r.products,
-           giftBag:r.giftBag,giftCup:r.giftCup,date:viewDate,assignSelf:!!assignSelf};
+           giftRules:r.giftRules||[],
+           date:viewDate,assignSelf:!!assignSelf};
   render();
 };
 window.openEditBuilder = async (storeId,orderId)=>{
@@ -592,7 +590,8 @@ window.openEditBuilder = async (storeId,orderId)=>{
   }
   const r = await loadPrices(storeId);
   if (!r) return;
-  builder={storeId,mode:'edit',orderId,cart,giftCart,priceList:r.products,giftBag:r.giftBag,giftCup:r.giftCup};
+  builder={storeId,mode:'edit',orderId,cart,giftCart,priceList:r.products,
+           giftRules:r.giftRules||[]};
   render();
 };
 window.closeBuilder = ()=>{ builder=null; render(); };
