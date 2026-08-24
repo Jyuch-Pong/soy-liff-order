@@ -243,11 +243,16 @@ function render() {
           ${rows.map(r=>`
             <div style="margin-top:8px;font-size:16px">
               ${r.label}滿 ${r.cls==="袋"?g.bagTh:g.cupTh} 可送 <b style="color:#7eb3ff">${r.got}</b> ${r.cls}
+              ${(r.cls==="袋"?store.giftBagProductId:store.giftCupProductId)?'<span style="font-size:14px;color:var(--text3)">(指定品項)</span>':""}
               ${r.sel<r.got?`<span style="color:var(--amber);font-size:15px">(還可選 ${r.got-r.sel} ${r.cls})</span>`
                           :`<span style="color:var(--green);font-size:15px">✓ 已選滿</span>`}
             </div>
             <div style="margin-top:6px">
-              ${products.filter(p=>(p.unit||"").includes(r.cls)).map(p=>{
+              ${products.filter(p=>{
+                if (!(p.unit||"").includes(r.cls)) return false;
+                const lim = r.cls==="袋" ? store.giftBagProductId : store.giftCupProductId;
+                return !lim || p.id === lim;   // 有指定贈品品項時只顯示該品項
+              }).map(p=>{
                 const gq = giftCart[p.id]||0;
                 return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0">
                   <span style="font-size:16px">${esc(p.name)}</span>
