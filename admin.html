@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>司機配送</title>
+<title>豆漿訂貨 Admin</title>
 <style>
   :root {
     --bg:#17181a; --card:#1f2123; --border:#34383b; --text:#EDEDEB;
@@ -11,792 +11,810 @@
     --amber:#f59e0b; --red:#f43f5e;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--text);font-family:-apple-system,"Noto Sans TC",sans-serif;font-size:16px;padding-bottom:20px}
-  .topbar{background:var(--green-d);color:#fff;padding:12px 16px;position:sticky;top:0;z-index:10}
-  .topbar .name{font-weight:700;font-size:17px}
-  .topbar .sub{font-size:14px;opacity:.85;margin-top:2px}
-  .bar2{background:var(--card);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
-  input,select{background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:16px}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,"Noto Sans TC",sans-serif;font-size:16px}
+  .topbar{background:var(--card);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+  .topbar .title{font-weight:700}
+  .tabs{display:flex;gap:4px;background:var(--card);border-bottom:1px solid var(--border);padding:0 8px;overflow-x:auto}
+  .tabs button{background:none;border:none;color:var(--text2);padding:10px 14px;font-size:15px;border-bottom:2px solid transparent;white-space:nowrap}
+  .tabs button.on{color:var(--green);border-bottom-color:var(--green);font-weight:700}
+  .wrap{padding:14px;max-width:900px;margin:0 auto}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+  .card{overflow-x:auto}
+  .card table{min-width:100%}
+  table{width:100%;border-collapse:collapse;font-size:15px}
+  th{color:var(--text2);text-align:left;font-weight:500;padding:6px 8px;border-bottom:1px solid var(--border)}
+  td{padding:7px 8px;border-bottom:1px solid #2a2d30}
+  tr:last-child td{border-bottom:none}
+  input,select{background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-size:15px}
   input[type=date]{color-scheme:dark}
-  .wrap{padding:12px;max-width:560px;margin:0 auto}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px}
-  .scard{border-radius:12px;border:2px solid;padding:12px;margin-bottom:10px}
-  .s-green{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.45)}
-  .s-red{background:rgba(244,63,94,.08);border-color:rgba(244,63,94,.45)}
-  .s-done{background:rgba(16,185,129,.04);border-color:rgba(16,185,129,.2);opacity:.75}
+  button.btn{background:var(--green-d);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:15px;font-weight:600}
+  button.btn2{background:none;color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:14px}
+  button.danger{background:none;color:var(--red);border:none;font-size:14px}
   .mono{font-family:monospace}
   .green{color:var(--green)} .amber{color:var(--amber)} .red{color:var(--red)} .dim{color:var(--text3)}
-  .badge{font-size:13px;padding:2px 8px;border-radius:99px;border:1px solid;white-space:nowrap}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .login{max-width:320px;margin:120px auto;text-align:center}
+  .login input{width:100%;margin:12px 0;padding:10px}
+  .login button{width:100%;padding:10px}
+  .badge{font-size:13px;padding:2px 8px;border-radius:99px;border:1px solid;display:inline-flex;align-items:center;gap:4px}
   .b-green{color:var(--green);border-color:var(--green)}
   .b-red{color:var(--red);border-color:var(--red)}
   .b-amber{color:var(--amber);border-color:var(--amber)}
-  .b-blue{color:#60a5fa;border-color:#60a5fa}
-  button.btn{background:var(--green-d);color:#fff;border:none;border-radius:10px;padding:9px 14px;font-size:15px;font-weight:600}
-  button.btn-red{background:var(--red);color:#fff;border:none;border-radius:10px;padding:9px 14px;font-size:15px;font-weight:600}
-  button.btn2{background:none;color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:14px}
-  .full{width:100%}
-  .login{max-width:300px;margin:110px auto;text-align:center}
-  .login input{width:100%;margin:8px 0;padding:11px}
-  .login button{width:100%;padding:11px;margin-top:8px}
-  table{width:100%;border-collapse:collapse;font-size:15px}
-  th{color:var(--text2);text-align:left;font-weight:500;padding:5px 6px;border-bottom:1px solid var(--border)}
-  td{padding:6px;border-bottom:1px solid #2a2d30}
-  tr:last-child td{border-bottom:none}
-  .oitem{font-size:17px;color:var(--text);display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #26292b}
-  .oitem:last-child{border-bottom:none}
-  .oitem .nm{display:flex;align-items:center;gap:6px}
-  .oitem .qt{font-family:monospace;font-size:18px;font-weight:700}
-  .tgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
-  .tbox{border-radius:12px;padding:10px 12px;border:2px solid}
-  .tbox.bag{background:rgba(59,130,246,.10);border-color:rgba(59,130,246,.55)}
-  .tbox.cup{background:rgba(249,115,22,.10);border-color:rgba(249,115,22,.55)}
-  .tbox.other{background:rgba(154,157,156,.08);border-color:var(--border)}
-  .tbox .tname{font-size:16px;font-weight:600;line-height:1.3}
-  .tbox .tqty{font-family:monospace;font-size:26px;font-weight:800;margin-top:4px}
-  .tbox.bag .tqty{color:#7eb3ff} .tbox.cup .tqty{color:#ffb27d} .tbox.other .tqty{color:var(--text)}
-  .tbox .tsub{font-size:13px;color:var(--text3);margin-top:2px}
-  .tbox .exsplit{font-size:13px;color:#c084fc;margin-top:4px;padding-top:4px;border-top:1px dashed rgba(192,132,252,.4)}
-  .revbox{background:var(--card);border:2px solid var(--green-d);border-radius:12px;padding:12px 14px;margin-bottom:10px}
-  .revrow{display:flex;justify-content:space-between;align-items:baseline;padding:4px 0}
-  .revrow .lbl{font-size:15px;color:var(--text2)}
-  .revrow .amt{font-family:monospace;font-size:22px;font-weight:800}
-  .revrow .cnt{font-size:14px;color:var(--text3);margin-left:6px;font-weight:400}
-  .revtotal{border-top:1px solid var(--border);margin-top:6px;padding-top:8px}
-  .addbtn{width:100%;padding:12px;border-radius:12px;border:1px dashed var(--border);background:none;color:var(--text2);font-size:16px;margin-bottom:10px}
-  .srow{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #2a2d30;font-size:16px}
-  .srow:active{background:rgba(255,255,255,.05)}
-  .dbox{border-radius:12px;padding:12px 14px;border:2px solid rgba(245,158,11,.5);background:rgba(245,158,11,.08);margin-top:8px}
-  .dhead{display:flex;justify-content:space-between;align-items:center;padding-bottom:8px;border-bottom:1px solid rgba(245,158,11,.3)}
-  .dhead .dname{font-size:17px;font-weight:700}
-  .dhead .dsum{font-family:monospace;font-size:22px;font-weight:800;color:var(--amber)}
-  .drow{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:15px}
-  .drow .dp{font-family:monospace;color:var(--text2);min-width:96px}
-  .drow .dp s{color:var(--text3)}
-  .drow .dp b{color:var(--amber)}
-  .drow .dq{font-family:monospace;flex:1;text-align:center;color:var(--text)}
-  .drow .ds{font-family:monospace;font-weight:700;color:var(--amber);min-width:64px;text-align:right}
-  .oitem{font-size:17px;color:var(--text);display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #26292b}
-  .oitem:last-child{border-bottom:none}
-  .oitem .nm{display:flex;align-items:center;gap:6px}
-  .oitem .qt{font-family:monospace;font-size:18px;font-weight:700}
-  .tgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
-  .tbox{border-radius:12px;padding:10px 12px;border:2px solid}
-  .tbox.bag{background:rgba(59,130,246,.10);border-color:rgba(59,130,246,.55)}
-  .tbox.cup{background:rgba(249,115,22,.10);border-color:rgba(249,115,22,.55)}
-  .tbox.other{background:rgba(154,157,156,.08);border-color:var(--border)}
-  .tbox .tname{font-size:16px;font-weight:600;line-height:1.3}
-  .tbox .tqty{font-family:monospace;font-size:26px;font-weight:800;margin-top:4px}
-  .tbox.bag .tqty{color:#7eb3ff} .tbox.cup .tqty{color:#ffb27d} .tbox.other .tqty{color:var(--text)}
-  .tbox .tsub{font-size:13px;color:var(--text3);margin-top:2px}
-  .tbox .exsplit{font-size:13px;color:#c084fc;margin-top:4px;padding-top:4px;border-top:1px dashed rgba(192,132,252,.4)}
-  .revbox{background:var(--card);border:2px solid var(--green-d);border-radius:12px;padding:12px 14px;margin-bottom:10px}
-  .revrow{display:flex;justify-content:space-between;align-items:baseline;padding:4px 0}
-  .revrow .lbl{font-size:15px;color:var(--text2)}
-  .revrow .amt{font-family:monospace;font-size:22px;font-weight:800}
-  .revrow .cnt{font-size:14px;color:var(--text3);margin-left:6px;font-weight:400}
-  .revtotal{border-top:1px solid var(--border);margin-top:6px;padding-top:8px}
-  .addbtn{width:100%;padding:12px;border-radius:12px;border:1px dashed var(--border);background:none;color:var(--text2);font-size:16px;margin-bottom:10px}
-  .srow{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #2a2d30;font-size:16px}
-  .srow:active{background:rgba(255,255,255,.05)}
-  .dbox{border-radius:12px;padding:10px 12px;border:2px solid rgba(245,158,11,.5);background:rgba(245,158,11,.08)}
-  .dbox .dname{font-size:16px;font-weight:600;line-height:1.3}
-  .dbox .dprice{font-size:14px;color:var(--text2);margin-top:3px;font-family:monospace}
-  .dbox .dprice s{color:var(--text3)}
-  .dbox .dprice b{color:var(--amber)}
-  .dbox .dcalc{font-size:13px;color:var(--text3);margin-top:2px;font-family:monospace}
-  .dbox .dsum{font-family:monospace;font-size:24px;font-weight:800;color:var(--amber);margin-top:4px}
-  .qtyrow{display:flex;justify-content:space-between;align-items:center;padding:5px 0}
-  .qtyrow .ctrl{display:flex;align-items:center;gap:10px}
-  .qtyrow button{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:18px}
-  .qtyrow button.p{background:var(--green-d);border-color:var(--green-d);color:#fff}
-  .qtyrow input.n{width:56px;height:36px;text-align:center;font-family:monospace;font-size:16px;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:8px}
-  .qtyrow input.n::-webkit-outer-spin-button,.qtyrow input.n::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-  details summary{cursor:pointer;padding:4px 0}
-  .utag{display:inline-block;font-size:14px;font-weight:700;padding:1px 8px;border-radius:6px;margin-right:2px}
+  .b-dim{color:var(--text2);border-color:var(--border)}
+  .oitem{font-size:14px;color:var(--text2);display:flex;justify-content:space-between;padding:2px 0}
+  input[readonly]{border-color:transparent;background:transparent;cursor:default}
+  .lockbtn{border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:14px;background:none}
+  .lockbtn.on{background:var(--amber);border-color:var(--amber);color:#17181a;font-weight:700}
+  .utag{display:inline-block;font-size:14px;font-weight:700;padding:1px 8px;border-radius:6px;margin-right:6px}
   .utag.bag{background:rgba(59,130,246,.18);color:#7eb3ff}
   .utag.cup{background:rgba(249,115,22,.18);color:#ffb27d}
   .utag.other{background:rgba(154,157,156,.15);color:var(--text2)}
-  .addr{font-size:14px;color:var(--text2);margin-top:2px}
-  a.navlink{display:inline-block;color:#60a5fa;text-decoration:none;border-bottom:1px dotted rgba(96,165,250,.5)}
-  .ordersum{display:flex;gap:8px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)}
-  .sumchip{font-size:15px;padding:4px 12px;border-radius:99px;border:1px solid}
-  .sumchip b{font-family:monospace;font-size:18px}
-  .sumchip.bag{color:#7eb3ff;border-color:rgba(59,130,246,.6);background:rgba(59,130,246,.10)}
-  .sumchip.cup{color:#ffb27d;border-color:rgba(249,115,22,.6);background:rgba(249,115,22,.10)}
-  .giftbadge{margin-left:6px;font-size:13px;font-weight:700;color:#7eb3ff;background:rgba(59,130,246,.15);border-radius:6px;padding:1px 7px}
-  .exrow{display:flex;justify-content:space-between;align-items:center;font-size:15px;padding:4px 0;color:var(--text2)}
-  .exbox{margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)}
-  .rowbtns{display:flex;gap:8px;margin-top:10px}
-  .rowbtns button{flex:1}
+  .badge .x{cursor:pointer;font-weight:700}
+  details summary{cursor:pointer;color:var(--text2);font-size:14px;padding:4px 0}
+  .storeline{font-size:14px;color:var(--text2);padding:2px 0 2px 12px}
 </style>
 </head>
 <body>
 <div id="app"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ====== 設定 ======
-const API = "https://whwhufkehoxgrrwacqjv.supabase.co/functions/v1/driver-api";
-// 每籃(K)數量設定:單位含「袋」=6袋/籃、含「杯」=24杯/籃
-const PER_BASKET = { bag: 6, cup: 24 };
-function unitClass(u){ u=u||""; return u.includes("袋")?"bag":u.includes("杯")?"cup":"other"; }
-// 換算籃數:10袋→1K4、30杯→1K6、12袋→2K、4袋→4
-function toBasket(qty, unit){
-  const c = unitClass(unit);
-  const per = PER_BASKET[c];
-  if (!per || qty < per) return { main: String(qty), sub: "" };
-  const k = Math.floor(qty/per), r = qty%per;
-  return { main: r ? `${k}K${r}` : `${k}K`, sub: `${qty} ${unit}` };
-}
+const API = "https://whwhufkehoxgrrwacqjv.supabase.co/functions/v1/admin-api";
+const ROUTE_CODES = ["A","B","C","D","E","F","G","H","I","J","K","Z","T"];
+const DAY_GROUPS = ["一四","二五","三六"];
 
-let CRED = JSON.parse(sessionStorage.getItem("driverCred")||"null"); // {account,password,name,car_no}
-let viewDate = todayTW();
-let data = null;        // today回傳的資料
-let builder = null;     // {storeId, mode:'new'|'addon', orderId?, cart:{}}
+let KEY = sessionStorage.getItem("adminKey") || "";
+let locked = true; // 預設唯讀,避免誤觸修改
+let tab = "orders";
+let stores = [], products = [], orders = [], summary = [], drivers = [], customPrices = {};
+let selStore = "", orderDate = tomorrowTW();
+let invoiceMonth = new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"}).slice(0,7);
+let invoiceRows = [];
+let exMonth = new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"}).slice(0,7);
+let fRoute = "", fDay = "", fKeyword = "";   // 店家分頁篩選
+let pRoute = "", pDay = "", pOnlyCustom = false; // 客製價分頁篩選
 
 const app = document.getElementById("app");
 
-function todayTW(){ return new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"}); }
-function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-function weekdayTW(dateStr){
-  return new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",weekday:"short"}).format(new Date(dateStr+"T12:00:00+08:00"));
+function tomorrowTW(){
+  return new Date(Date.now()+86400000).toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"});
 }
+function filterStores(list, route, day, kw){
+  const k = (kw||"").trim().toLowerCase();
+  return list.filter(s=>{
+    if (route && s.route_code !== route) return false;
+    if (day && s.day_group !== day) return false;
+    if (k && !((s.store_code||"").toLowerCase().includes(k) || (s.name||"").toLowerCase().includes(k))) return false;
+    return true;
+  });
+}
+function routeOptions(list, sel){
+  const rs = [...new Set(list.map(s=>s.route_code).filter(Boolean))].sort();
+  return `<option value="">全部路線</option>` + rs.map(r=>`<option value="${r}" ${r===sel?"selected":""}>路線 ${r}</option>`).join("");
+}
+function dayOptions(sel){
+  return `<option value="">全部梯次</option>` + DAY_GROUPS.map(d=>`<option value="${d}" ${d===sel?"selected":""}>${d}</option>`).join("");
+}
+
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 
 async function api(action, opts={}){
   const url = new URL(API);
   url.searchParams.set("action", action);
   for (const [k,v] of Object.entries(opts.params||{})) url.searchParams.set(k,v);
   const res = await fetch(url, {
-    method: opts.body||action==="login" ? "POST":"GET",
-    headers: {
-      "x-driver-account": CRED?.account||"",
-      "x-driver-password": CRED?.password||"",
-      ...(opts.body?{"Content-Type":"application/json"}:{}),
-    },
+    method: opts.body ? "POST":"GET",
+    headers: {"x-admin-key":KEY, ...(opts.body?{"Content-Type":"application/json"}:{})},
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
-  const d = await res.json();
-  if (res.status===401 && action!=="login"){ logout(); throw new Error("unauthorized"); }
-  if (!res.ok) throw new Error(d.error||"error");
-  return d;
+  const data = await res.json();
+  if (res.status===401){ KEY=""; sessionStorage.removeItem("adminKey"); renderLogin("密碼錯誤"); throw new Error("unauthorized"); }
+  if (!res.ok) throw new Error(data.error||"error");
+  return data;
 }
 
 // ====== 登入 ======
 function renderLogin(msg){
   app.innerHTML = `
     <div class="login">
-      <h2>🚚 司機配送系統</h2>
+      <h2>🥛 訂貨系統</h2>
       ${msg?`<div class="red" style="margin-top:8px">${esc(msg)}</div>`:""}
-      <input id="acc" placeholder="帳號" autocomplete="username" />
-      <input id="pw" type="password" placeholder="密碼" autocomplete="current-password" />
+      <input type="password" id="pw" placeholder="管理密碼" />
       <button class="btn" onclick="doLogin()">登入</button>
     </div>`;
   document.getElementById("pw").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin()});
 }
 window.doLogin = async function(){
-  const account = document.getElementById("acc").value.trim();
-  const password = document.getElementById("pw").value;
-  CRED = { account, password };
+  KEY = document.getElementById("pw").value.trim();
   try {
-    const r = await api("login",{body:{}});
-    CRED.name = r.driver.name; CRED.car_no = r.driver.car_no;
-    sessionStorage.setItem("driverCred", JSON.stringify(CRED));
-    load();
-  } catch(e){ CRED=null; renderLogin(e.message==="unauthorized"?"帳號或密碼錯誤":e.message); }
+    await api("products");
+    sessionStorage.setItem("adminKey", KEY);
+    boot();
+  } catch(e){}
 };
-function logout(){ CRED=null; sessionStorage.removeItem("driverCred"); renderLogin(); }
-window.logout = logout;
 
 // ====== 主畫面 ======
-async function load(focusStoreId){
-  if (!focusStoreId) app.innerHTML = `<div class="wrap dim">載入中…</div>`;
-  try {
-    data = await api("today",{params:{date:viewDate}});
-    render();
-    // 捲回原本看的那間店(送達後明細會收合、版面高度改變,用元素定位比像素可靠)
-    const target = focusStoreId || sessionStorage.getItem("driverFocus");
-    if (target) {
-      const el = document.getElementById("s-" + target);
-      if (el) {
-        el.scrollIntoView({ block: "center" });
-        requestAnimationFrame(()=>el.scrollIntoView({ block: "center" }));
-      }
-    }
-  } catch(e){
-    if (String(e.message)!=="unauthorized")
-      app.innerHTML = `<div class="wrap red">載入失敗:${esc(e.message)}</div>`;
-  }
-}
+async function boot(){ render(); await loadTab(); }
 
 function render(){
-  const done = data.stores.filter(s=>s.order).length;
   app.innerHTML = `
-    <div class="topbar">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <div class="name">🚚 ${esc(CRED.name)} <span style="font-weight:400;font-size:14px;opacity:.85">${esc(CRED.car_no||"")}</span></div>
-          <div class="sub">${viewDate}(${weekdayTW(viewDate)}) · 路線 ${data.routes.join("、")||"無"} · 梯次 ${esc(data.dayGroup||"-")}</div>
-        </div>
-        <button class="btn2" style="color:#fff;border-color:rgba(255,255,255,.4)" onclick="logout()">登出</button>
-      </div>
+    <div class="topbar"><span class="title">🥛 訂貨系統</span>
+      <span style="display:flex;gap:8px;align-items:center">
+        <button class="lockbtn ${locked?'':'on'}" onclick="toggleLock()">${locked?'🔒 唯讀':'✏️ 編輯中'}</button>
+        <button class="btn2" onclick="logout()">登出</button>
+      </span></div>
+    <div class="tabs">
+      ${[["orders","訂單"],["summary","品項統計"],["stores","店家"],["products","商品"],["prices","客製價"],["exchange","換貨"],["invoice","發票"],["drivers","司機"],["routes","路線"]].map(([k,l])=>
+        `<button class="${tab===k?"on":""}" onclick="switchTab('${k}')">${l}</button>`).join("")}
     </div>
-    <div class="bar2">
-      <input type="date" value="${viewDate}" onchange="chgDate(this.value)" />
-      <span class="green" style="font-weight:700">${done}/${data.stores.length} 已下單</span>
-    </div>
-    <div class="wrap">
-      ${renderRevenue()}
-      ${(builder && !findStore(builder.storeId)) ? `
-        <div class="scard s-red" style="border-color:#c084fc">
-          <div><b>➕ 臨時加店建單</b></div>
-          ${renderBuilder({id:builder.storeId})}
-        </div>` : ""}
-      ${renderTotals()}
-      ${renderGifts()}
-      ${renderDiscounts()}
-      ${(data.extraStores&&data.extraStores.length)?`
-        <div class="card" style="border-color:var(--amber)">
-          <b class="amber">⚠️ 非配送日訂單(${data.extraStores.length})</b>
-          <div class="dim" style="font-size:14px;margin:4px 0 8px">這些店家今天不是他們的配送梯次,但有指定今天配送的訂單,請記得送</div>
-          ${data.extraStores.map(s=>renderStore(s,true)).join("")}
-        </div>`:""}
-      ${(data.adhocStores&&data.adhocStores.length)?`
-        <div class="card" style="border-color:#c084fc">
-          <b style="color:#c084fc">➕ 臨時加店(${data.adhocStores.length})</b>
-          <div class="dim" style="font-size:14px;margin:4px 0 8px">今日臨時安排、非原路線的店家</div>
-          ${data.adhocStores.map(s=>renderStore(s,false,true)).join("")}
-        </div>`:""}
-      <button class="addbtn" onclick="openAddStore()">➕ 臨時加店(代跑/新客戶)</button>
-      ${data.stores.length===0?'<div class="card dim">此日期無配送店家</div>':""}
-      ${data.stores.map(s=>renderStore(s,false)).join("")}
-    </div>`;
+    <div class="wrap" id="content"><div class="dim">載入中…</div></div>`;
 }
+window.logout = ()=>{ KEY=""; sessionStorage.removeItem("adminKey"); renderLogin(); };
+window.toggleLock = ()=>{
+  locked = !locked;
+  if (!locked) setTimeout(()=>{ if(!locked) { locked=true; render(); loadTab(); } }, 180000); // 3分鐘後自動上鎖
+  render(); loadTab();
+};
+window.switchTab = (k)=>{ tab=k; render(); loadTab(); };
 
-function renderRevenue(){
-  const r = data.revenue;
-  if (!r || (!r.total && !r.deliveredStores && !r.pendingStores)) return "";
-  return `
-    <div class="revbox">
-      <div class="revrow">
-        <span class="lbl">✅ 已送達<span class="cnt">${r.deliveredStores} 間</span></span>
-        <span class="amt green">$${r.delivered.toLocaleString()}</span>
-      </div>
-      <div class="revrow">
-        <span class="lbl">⏳ 未送達<span class="cnt">${r.pendingStores} 間</span></span>
-        <span class="amt" style="color:var(--text2)">$${r.pending.toLocaleString()}</span>
-      </div>
-      <div class="revrow revtotal">
-        <span class="lbl" style="font-weight:700;color:var(--text)">今日合計<span class="cnt">${r.deliveredStores + r.pendingStores} 間</span></span>
-        <span class="amt" style="font-size:24px">$${r.total.toLocaleString()}</span>
-      </div>
-    </div>`;
-}
-
-function renderTotals(){
-  if (!data.totals.length) return "";
-  return `
-    <div class="card">
-      <details open>
-        <summary><b>📦 當日品項總計</b></summary>
-        <div class="tgrid">
-          ${data.totals.map(t=>{
-            const c = unitClass(t.unit);
-            const ex = t.exchangeQty || 0;
-            const orderQty = t.qty - ex;           // 訂單量(出車前備貨依據)
-            const b = toBasket(t.qty, t.unit);
-            const bo = toBasket(orderQty, t.unit);
-            return `<div class="tbox ${c}">
-              <div class="tname">${esc(t.name)}</div>
-              <div class="tqty">${b.main}${b.sub?"":`<span style="font-size:15px;font-weight:600"> ${esc(t.unit)}</span>`}</div>
-              <div class="tsub">${b.sub?esc(b.sub)+" · ":""}${t.storeCount} 間店</div>
-              ${ex?`<div class="exsplit">訂單 ${bo.main}${bo.sub?"":esc(t.unit)} ＋ 換貨 <b>${ex}</b></div>`:""}
-            </div>`}).join("")}
+async function loadTab(){
+  const c = document.getElementById("content");
+  try {
+    // ============ 訂單 ============
+    if (tab==="orders"){
+      orders = await api("orders",{params:{date:orderDate}});
+      c.innerHTML = `
+        <div class="row">
+          <label class="dim">配送日</label>
+          <input type="date" value="${orderDate}" onchange="chgDate(this.value)" />
+          <button class="btn2" onclick="chgDate('')">全部日期</button>
+          <span class="dim">共 ${orders.length} 筆</span>
+          <button class="btn2" onclick="exportOrders()">📥 匯出Excel</button>
         </div>
-      </details>
-    </div>`;
-}
-
-function renderGifts(){
-  if (!data.gifts || !data.gifts.length) return "";
-  const totalQty = data.gifts.reduce((s,g)=>s+g.qty,0);
-  return `
-    <div class="card" style="border-color:#3b82f6">
-      <details open>
-        <summary style="display:flex;justify-content:space-between;align-items:center">
-          <b style="color:#7eb3ff">🎁 今日搭贈</b>
-          <b style="color:#7eb3ff;font-size:18px">共 ${totalQty} 份</b>
-        </summary>
-        <div class="tgrid">
-          ${data.gifts.map(g=>{
-            const c = unitClass(g.unit);
-            const b = toBasket(g.qty, g.unit);
-            return `<div class="tbox ${c}" style="border-color:rgba(59,130,246,.5)">
-              <div class="tname">${esc(g.name)}</div>
-              <div class="tqty" style="color:#7eb3ff">${b.main}${b.sub?"":`<span style="font-size:15px;font-weight:600"> ${esc(g.unit)}</span>`}</div>
-              <div class="tsub">${b.sub?esc(b.sub)+" · ":""}${g.storeCount} 間店</div>
-            </div>`}).join("")}
-        </div>
-        <div class="dim" style="font-size:13px;margin-top:8px">※ 搭贈品項不計金額,已計入當日備貨總量</div>
-      </details>
-    </div>`;
-}
-
-function renderDiscounts(){
-  if (!data.discounts) return ""; // 後端未提供(driver-api未更新)
-  if (!data.discounts.length) {
-    return `<div class="card">
-      <b class="dim">💰 今日折讓統計</b>
-      <div class="dim" style="font-size:14px;margin-top:4px">今日訂單皆為原價,無折讓</div>
-    </div>`;
-  }
-  // 同品項(名稱+單位)歸為一組,組內列出各優惠價
-  const groups = {};
-  for (const x of data.discounts){
-    const key = x.name + "|" + x.unit;
-    if (!groups[key]) groups[key] = { name:x.name, unit:x.unit, rows:[], sum:0 };
-    groups[key].rows.push(x);
-    groups[key].sum += x.subtotal;
-  }
-  const list = Object.values(groups).sort((a,b)=>b.sum-a.sum);
-  return `
-    <div class="card" style="border-color:var(--amber)">
-      <details open>
-        <summary style="display:flex;justify-content:space-between;align-items:center">
-          <b class="amber">💰 今日折讓統計</b>
-          <b class="amber" style="font-size:22px">-$${data.discountTotal.toLocaleString()}</b>
-        </summary>
-        ${list.map(g=>`
-          <div class="dbox">
-            <div class="dhead">
-              <span class="dname"><span class="utag ${unitClass(g.unit)}">${esc(g.unit)}</span>${esc(g.name)}</span>
-              <span class="dsum">-$${g.sum.toLocaleString()}</span>
+        ${orders.length===0?'<div class="card dim">此日期尚無訂單</div>':""}
+        ${orders.map(o=>`
+          <div class="card" style="${o.status==='cancelled'?'opacity:.45':''}">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <span class="mono green">${esc(o.stores.store_code)}</span>
+                <b> ${esc(o.stores.name)}</b>
+                ${o.source==='on_site'?'<span class="badge b-amber">現場建單</span>':""}
+                ${o.status==='cancelled'?'<span class="badge b-red">已刪除</span>':""}
+                <div class="dim" style="font-size:14px;margin-top:2px">配送 ${o.delivery_date} · 下單 ${o.order_date}</div>
+              </div>
+              ${o.status!=='cancelled'?`<span style="white-space:nowrap"><button class="btn2" onclick="editOrder('${o.id}')">編輯</button> <button class="danger" onclick="cancelOrder('${o.id}')">刪除</button></span>`:""}
             </div>
-            ${g.rows.sort((a,b)=>b.subtotal-a.subtotal).map(x=>`
-              <div class="drow">
-                <span class="dp"><s>$${x.base}</s>→<b>$${x.price}</b></span>
-                <span class="dq">${x.qty} ${esc(x.unit)} × $${x.diff}</span>
-                <span class="ds">-$${x.subtotal.toLocaleString()}</span>
-              </div>`).join("")}
-          </div>`).join("")}
-        <div class="dim" style="font-size:13px;margin-top:8px">※ 單價低於商品基礎價者列入;同品項不同優惠價分列計算</div>
-      </details>
-    </div>`;
-}
+            <div style="margin-top:8px">
+              ${(o.order_items||[]).map(it=>`<div class="oitem"><span>${esc(it.products.name)}</span><span class="mono dim">${it.quantity} × $${it.unit_price}</span></div>`).join("")}
+            </div>
+            <div style="text-align:right;font-weight:700;margin-top:6px">$${Number(o.total_amount).toLocaleString()}</div>
+          </div>`).join("")}`;
+    }
 
-function findStore(id){
-  return (data.stores||[]).find(x=>x.id===id)
-      || (data.extraStores||[]).find(x=>x.id===id)
-      || (data.adhocStores||[]).find(x=>x.id===id);
-}
-
-function renderStore(s, isExtra, isAdhoc){
-  const ordered = !!s.order;
-  const delivered = ordered && s.order.status==="delivered";
-  const cls = delivered ? "s-done" : ordered ? "s-green" : "s-red";
-  const isBuilding = builder && builder.storeId===s.id;
-  return `
-    <div class="scard ${cls}" id="s-${s.id}" ${isExtra?'style="border-style:dashed"':""}>
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-        <div>
-          <span class="mono dim" style="font-size:13px;font-weight:700">${esc(s.store_code)}</span>
-          <b style="margin-left:4px">${esc(s.name)}</b>
-          ${isExtra?`<span class="badge b-amber" style="margin-left:4px">梯次 ${esc(s.day_group||"?")}</span>`:""}
-          ${isAdhoc?(s.isTemp?'<span class="badge" style="color:#c084fc;border-color:#c084fc;margin-left:4px">臨時店家</span>'
-                              :`<span class="badge" style="color:#c084fc;border-color:#c084fc;margin-left:4px">原${esc(s.homeRoute||"其他路線")}</span>`):""}
-          ${isAdhoc&&s.assignedTo?`<div style="font-size:14px;color:#c084fc;margin-top:3px">🚚 今日由 <b>${esc(s.assignedTo)}</b> 配送</div>`:""}
-          ${s.address?`<a class="addr navlink" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s.address)}" target="_blank" rel="noopener">📍 ${esc(s.address)} <span style="font-size:13px">▸導航</span></a>`:""}
-          ${s.note?`<div class="addr" style="color:var(--amber)">📝 ${esc(s.note)}</div>`:""}
-        </div>
-        ${delivered?'<span class="badge b-blue">✓ 已送達</span>'
-          :ordered?(s.order.status==='provisional'
-             ?'<span class="badge b-amber">📦 預抓(未確認)</span>'
-             :'<span class="badge b-green">已訂貨</span>')
-          :'<span class="badge b-red">未訂貨</span>'}
-      </div>
-
-      ${ordered ? `
-        <details style="margin-top:8px" ${delivered?"":"open"}>
-          <summary style="display:flex;justify-content:space-between">
-            <span class="dim" style="font-size:14px">訂貨明細 ${s.order.source==='on_site'?'<span class="badge b-amber">現場建單</span>':""}</span>
-            <b>$${s.order.total.toLocaleString()}</b>
-          </summary>
-          <div style="margin-top:6px">
-            ${s.order.items.map(it=>{
-              const u = it.unit||"";
-              const c = u.includes('袋')?'bag':u.includes('杯')?'cup':'other';
-              return `<div class="oitem">
-                <span class="nm"><span class="utag ${c}">${esc(u)}</span>${esc(it.name)}${it.isGift?'<span class="giftbadge">🎁贈品</span>':""}</span>
-                <span class="qt">${it.qty}<span style="font-size:14px;color:var(--text3);font-weight:400">${it.isGift?" (不計價)":` × $${it.price}`}</span></span>
-              </div>`}).join("")}
-            ${(()=>{
-              let bag=0, cup=0;
-              for (const it of s.order.items){
-                const u = it.unit||"";
-                const n = it.qty;
-                if (u.includes('袋')) bag += n;
-                else if (u.includes('杯')) cup += n;
-              }
-              // 換貨補的新品也要帶
-              for (const e of (s.exchanges||[])){
-                const u = e.unit||"";
-                if (u.includes('袋')) bag += e.replaced;
-                else if (u.includes('杯')) cup += e.replaced;
-              }
-              if (!bag && !cup) return "";
-              const chip = (label,n,cls)=>{
-                const b = toBasket(n, cls==='bag'?'袋':'杯');
-                return `<span class="sumchip ${cls}">${label} <b>${b.main}</b>${b.sub?`<span style="font-size:13px;opacity:.75"> (${n})</span>`:""}</span>`;
-              };
-              return `<div class="ordersum">
-                ${bag?chip("袋裝合計",bag,"bag"):""}
-                ${cup?chip("杯裝合計",cup,"cup"):""}
-              </div>`;
-            })()}
-          </div>
-        </details>
-        ${!isBuilding ? `
-          ${(s.exchanges&&s.exchanges.length)?`<div class="exbox">
-            ${s.exchanges.map(e=>`<div class="exrow">
-              <span>🔄 ${esc(e.name)} <span class="dim">${esc(e.unit)}</span></span>
-              <span class="mono">回收${e.returned} / 補${e.replaced}</span>
-            </div>`).join("")}
-          </div>`:""}
-          <div class="rowbtns">
-            ${!delivered?`<button class="btn2" onclick="openExchange('${s.id}')">🔄 換貨</button>`:""}
-            ${!delivered?`<button class="btn2" onclick="openEditBuilder('${s.id}','${s.order.id}')">✎ 編輯</button>`:""}
-            ${!delivered?`<button class="btn2" onclick="openBuilder('${s.id}','addon','${s.order.id}')">＋ 追加</button>`:""}
-            ${!delivered?`<button class="btn" onclick="markDelivered('${s.order.id}','${s.id}')">✓ 送達</button>`:""}
-          </div>`:""}
-      ` : `
-        ${(s.exchanges&&s.exchanges.length)?`<div class="exbox">
-          ${s.exchanges.map(e=>`<div class="exrow">
-            <span>🔄 ${esc(e.name)} <span class="dim">${esc(e.unit)}</span></span>
-            <span class="mono">回收${e.returned} / 補${e.replaced}</span>
-          </div>`).join("")}
-        </div>`:""}
-        ${!isBuilding?`<div class="rowbtns" style="margin-top:10px">
-          <button class="btn2" onclick="openExchange('${s.id}')">🔄 換貨</button>
-          <button class="btn2" onclick="openBuilder('${s.id}','pre')">📦 預抓</button>
-          <button class="btn-red" style="flex:1" onclick="openBuilder('${s.id}','new')">現場快速建單</button>
-        </div>`:""}
-      `}
-
-      ${isBuilding ? renderBuilder(s) : ""}
-    </div>`;
-}
-
-function renderBuilder(s){
-  return `
-    <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-      <b style="font-size:15px">${builder.mode==='addon'?'追加品項':builder.mode==='edit'?(isProvisional()?'調整預抓數量(全部歸0=店家不叫貨)':'編輯訂單(數量歸0=移除該品項)'):builder.mode==='pre'?'預抓數量(計入當日總計,到現場再調整)':'建立訂單'}</b>
-      ${(builder.mode==='new'||builder.mode==='pre')?`
-        <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0;padding:8px 10px;background:var(--bg);border-radius:8px">
-          <span class="dim" style="font-size:15px">配送日期</span>
-          <input type="date" value="${builder.date||viewDate}" onchange="setBuilderDate(this.value)"
-            style="font-size:16px;padding:6px 10px"/>
-        </div>`:""}
-      ${builder.priceList.map(p=>{
-        const q = builder.cart[p.id]||0;
-        const ucls = p.unit.includes('袋')?'bag':p.unit.includes('杯')?'cup':'other';
-        return `<div class="qtyrow">
-          <span style="font-size:16px"><span class="utag ${ucls}">${esc(p.unit)}</span>${esc(p.name)} <span class="dim" style="font-size:14px">$${p.price}</span></span>
-          <div class="ctrl">
-            <button onclick="chgQty('${p.id}',-1)">−</button>
-            <input class="n" type="number" inputmode="numeric" min="0" value="${q}"
-              onchange="setBQty('${p.id}',this.value)" onfocus="this.select()" />
-            <button class="p" onclick="chgQty('${p.id}',1)">＋</button>
-          </div>
-        </div>`}).join("")}
-      ${(()=>{
-        const g = bGiftInfo();
-        if (!g.bagGift && !g.cupGift) return "";
-        const rows = [];
-        if (g.bagGift) rows.push({cls:"袋",th:g.bagTh,got:g.bagGift,sel:g.selBag});
-        if (g.cupGift) rows.push({cls:"杯",th:g.cupTh,got:g.cupGift,sel:g.selCup});
-        return `<div style="margin-top:10px;padding:10px;border:1px solid #3b82f6;border-radius:10px;background:rgba(59,130,246,.10)">
-          <b style="color:#7eb3ff;font-size:15px">🎁 搭贈</b>
-          ${rows.map(r=>`
-            <div style="font-size:15px;margin-top:6px">滿${r.th}${r.cls} 可送 <b style="color:#7eb3ff">${r.got}</b>${r.cls}
-              ${r.sel<r.got?`<span class="amber">(還可選${r.got-r.sel})</span>`:'<span class="green">✓</span>'}</div>
-            ${builder.priceList.filter(p=>{
-              if (!(p.unit||"").includes(r.cls)) return false;
-              const lim = r.cls==="袋" ? builder.giftBagProductId : builder.giftCupProductId;
-              return !lim || p.id === lim;
-            }).map(p=>{
-              const gq = builder.giftCart[p.id]||0;
-              return `<div class="qtyrow" style="padding:3px 0">
-                <span style="font-size:15px">${esc(p.name)}</span>
-                <div class="ctrl">
-                  <button onclick="chgBGift('${p.id}',-1,'${r.cls}')">−</button>
-                  <span style="min-width:24px;text-align:center;font-family:monospace;font-size:16px;color:${gq?'#7eb3ff':'var(--text3)'}">${gq}</span>
-                  <button onclick="chgBGift('${p.id}',1,'${r.cls}')" style="background:rgba(59,130,246,.25);border-color:#3b82f6;color:#7eb3ff">＋</button>
-                </div>
-              </div>`}).join("")}`).join("")}
+    // ============ 品項統計 ============
+    if (tab==="summary"){
+      summary = await api("summary",{params:{date:orderDate}});
+      c.innerHTML = `
+        <div class="row"><label class="dim">配送日</label>
+          <input type="date" value="${orderDate}" onchange="chgDate(this.value)" /></div>
+        <div class="card">
+          <table><tr><th>品項</th><th style="text-align:right">總數量</th><th style="text-align:right">下單店數</th></tr>
+          ${summary.length===0?'<tr><td colspan="3" class="dim">此日期尚無訂單</td></tr>':""}
+          ${summary.map(s=>`<tr><td>${esc(s.name)}</td><td style="text-align:right" class="mono green"><b>${s.qty}</b> <span class="dim">${esc(s.unit)}</span></td><td style="text-align:right" class="mono dim">${s.storeCount}</td></tr>`).join("")}
+          </table>
         </div>`;
-      })()}
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--border);margin-top:6px">
-        <span class="dim">合計</span>
-        <b style="font-size:18px">$${builder.priceList.reduce((s,p)=>s+(builder.cart[p.id]||0)*p.price,0).toLocaleString()}</b>
-      </div>
-      <div class="rowbtns">
-        <button class="btn2" onclick="closeBuilder()">取消</button>
-        <button class="btn" onclick="submitBuilder()">${builder.mode==='addon'?'確認追加':builder.mode==='edit'?'儲存變更':builder.mode==='pre'?'儲存預抓':'建立訂單'}</button>
-      </div>
-    </div>`;
+    }
+
+    // ============ 店家 ============
+    if (tab==="stores"){
+      stores = await api("stores");
+      c.innerHTML = `
+        <div class="card">
+          <div class="row" style="margin-bottom:0">
+            <select onchange="setF('route',this.value)" style="min-width:110px">${routeOptions(stores,fRoute)}</select>
+            <select onchange="setF('day',this.value)" style="min-width:100px">${dayOptions(fDay)}</select>
+            <input id="fkw" value="${esc(fKeyword)}" placeholder="搜尋店號或店名" style="flex:1;min-width:140px" oninput="setF('kw',this.value)"/>
+            <span class="dim">符合 <b class="green">${filterStores(stores,fRoute,fDay,fKeyword).length}</b> / ${stores.length} 間</span>
+          </div>
+        </div>
+        <div class="card">
+          <b>新增店家</b>
+          <div class="row" style="margin-top:8px">
+            <input id="ns_code" placeholder="店號 如A-001" style="width:110px"/>
+            <input id="ns_name" placeholder="店名" style="width:130px"/>
+            <input id="ns_addr" placeholder="地址" style="width:180px"/>
+            <input id="ns_note" placeholder="備註(選填)" style="width:160px"/>
+            <select id="ns_route" style="width:70px"><option value="">路線</option>${ROUTE_CODES.map(r=>`<option>${r}</option>`).join("")}</select>
+            <select id="ns_dg" style="width:80px"><option value="">梯次</option>${DAY_GROUPS.map(d=>`<option>${d}</option>`).join("")}</select>
+            <button class="btn" onclick="createStore()">新增</button>
+          </div>
+        </div>
+        <div class="card"><table>
+          <tr><th>店號</th><th>店名</th><th>路線/梯次</th><th>LINE綁定</th><th>狀態</th><th style="text-align:right"></th></tr>
+          ${filterStores(stores,fRoute,fDay,fKeyword).map(s=>`<tr>
+            <td class="mono green">${esc(s.store_code)}</td>
+            <td>
+              <input value="${esc(s.name)}" ${locked?"readonly":""} style="width:130px;font-size:15px" onchange="updStoreField('${s.id}','name',this.value)"/>
+              <div style="margin-top:3px"><input value="${esc(s.address||"")}" ${locked?"readonly":""} placeholder="地址" style="width:170px;font-size:13px" onchange="updStoreField('${s.id}','address',this.value)"/></div>
+              <div style="margin-top:3px"><input value="${esc(s.note||"")}" ${locked?"readonly":""} placeholder="備註(司機端顯示)" style="width:220px;font-size:13px;${s.note?'color:var(--amber)':''}" onchange="updStoreField('${s.id}','note',this.value)"/></div>
+            </td>
+            <td class="dim">${esc(s.route_code||"-")} · ${esc(s.day_group||"-")}</td>
+            <td>${s.line_group_id?'<span class="green">已綁定</span>':'<span class="dim">未綁定</span>'}</td>
+            <td>${s.status==='active'?'<span class="badge b-green">使用中</span>':'<span class="badge b-red">停用</span>'}</td>
+            <td style="text-align:right;white-space:nowrap">
+              <button class="btn2" onclick="toggleStore('${s.id}','${s.status}')">${s.status==='active'?'停用':'啟用'}</button>
+              ${locked?"":`<button class="danger" onclick="deleteStore('${s.id}','${esc(s.name)}')">刪除</button>`}
+            </td>
+          </tr>`).join("")}
+        </table></div>
+        <div class="dim" style="font-size:14px">${locked?"🔒 目前為唯讀模式,點右上「唯讀」可解鎖編輯":"※ 已有訂單記錄的店家無法刪除(保護歷史帳),只能停用"}</div>`;
+    }
+
+    // ============ 商品 ============
+    if (tab==="products"){
+      products = await api("products");
+      c.innerHTML = `
+        <div class="card">
+          <b>新增商品</b>
+          <div class="row" style="margin-top:8px">
+            <input id="np_name" placeholder="商品名稱" style="width:150px"/>
+            <input id="np_unit" placeholder="單位" style="width:90px"/>
+            <input id="np_price" placeholder="基礎價" type="number" style="width:90px"/>
+            <button class="btn" onclick="createProduct()">新增</button>
+          </div>
+        </div>
+        ${products.map((p,i)=>`
+          <div class="card" style="padding:10px 12px">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              ${locked?"":`<span style="display:inline-flex;gap:4px">
+                <button class="btn2" style="padding:4px 9px" ${i===0?"disabled":""} onclick="moveProduct(${i},-1)">↑</button>
+                <button class="btn2" style="padding:4px 9px" ${i===products.length-1?"disabled":""} onclick="moveProduct(${i},1)">↓</button>
+              </span>`}
+              <input value="${esc(p.name)}" ${locked?"readonly":""} style="flex:2;min-width:110px" onchange="updProductField('${p.id}','name',this.value)"/>
+              <input value="${esc(p.unit)}" ${locked?"readonly":""} style="width:64px" onchange="updProductField('${p.id}','unit',this.value)"/>
+              <input type="number" value="${p.base_price}" ${locked?"readonly":""} style="width:76px;text-align:right" onchange="updPrice('${p.id}',this.value)"/>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+              <span>${p.is_active?'<span class="badge b-green">上架</span>':'<span class="badge b-red">下架</span>'}</span>
+              <span>
+                <button class="btn2" onclick="toggleProduct('${p.id}',${p.is_active})">${p.is_active?'下架':'上架'}</button>
+                ${locked?"":`<button class="danger" onclick="deleteProduct('${p.id}','${esc(p.name)}')">刪除</button>`}
+              </span>
+            </div>
+          </div>`).join("")}
+        <div class="dim" style="font-size:14px">${locked?"🔒 目前為唯讀模式,點右上「唯讀」可解鎖編輯":"※ 已有訂單記錄的商品無法刪除(保護歷史帳),只能下架"}</div>`;
+    }
+
+    // ============ 客製價 ============
+    if (tab==="prices"){
+      stores = await api("stores");
+      products = await api("products");
+      if (!selStore && stores.length) selStore = stores[0].id;
+      const pList = filterStores(stores, pRoute, pDay, "");
+      if (!pList.find(s=>s.id===selStore)) selStore = pList.length ? pList[0].id : "";
+      const cp = selStore ? await api("custom_prices",{params:{storeId:selStore}}) : [];
+      customPrices = Object.fromEntries(cp.map(c=>[c.product_id, c.custom_price]));
+      const customCount = Object.keys(customPrices).length;
+      const curStore = stores.find(s=>s.id===selStore);
+      c.innerHTML = `
+        <div class="card">
+          <div class="row" style="margin-bottom:8px">
+            <select onchange="setP('route',this.value)" style="min-width:110px">${routeOptions(stores,pRoute)}</select>
+            <select onchange="setP('day',this.value)" style="min-width:100px">${dayOptions(pDay)}</select>
+            <span class="dim">${pList.length} 間店</span>
+          </div>
+          <div class="row" style="margin-bottom:0">
+            <label class="dim">店家</label>
+            <select onchange="chgStore(this.value)" style="flex:1;min-width:180px">
+              ${pList.length===0?'<option value="">此篩選無店家</option>':""}
+              ${pList.map(s=>`<option value="${s.id}" ${s.id===selStore?"selected":""}>[${esc(s.store_code)}] ${esc(s.name)}</option>`).join("")}
+            </select>
+            ${selStore?`<span class="dim">已設 <b class="amber">${customCount}</b> 項客製價</span>`:""}
+          </div>
+          ${customCount?`<div class="row" style="margin-top:8px;margin-bottom:0">
+            <label class="dim" style="display:flex;align-items:center;gap:6px">
+              <input type="checkbox" ${pOnlyCustom?"checked":""} onchange="setP('only',this.checked)" style="width:18px;height:18px"/>
+              只顯示已設客製價的品項
+            </label>
+          </div>`:""}
+        </div>
+        ${selStore?`<div class="card">
+          <b>🎁 搭贈設定</b>
+          <div class="dim" style="font-size:14px;margin:4px 0 8px">填數字啟用(如填10=每買10袋送1);留空=此店無搭贈。下單時湊滿數量會提示選贈品品項。</div>
+          <div class="row" style="margin-bottom:6px">
+            <span class="utag bag">袋</span><span>每買</span>
+            <input type="number" id="gbag" value="${curStore?.gift_bag_threshold ?? ""}" ${locked?"readonly":""} placeholder="—" style="width:66px;text-align:center;font-size:17px"/>
+            <span>送 1 ·</span>
+            <span class="dim">贈品限定</span>
+            <select id="gbagp" ${locked?"disabled":""} style="min-width:130px;font-size:16px">
+              <option value="">不限(店家自選)</option>
+              ${products.filter(p=>p.is_active&&(p.unit||"").includes("袋")).map(p=>
+                `<option value="${p.id}" ${curStore?.gift_bag_product_id===p.id?"selected":""}>${esc(p.name)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="row" style="margin-bottom:6px">
+            <span class="utag cup">杯</span><span>每買</span>
+            <input type="number" id="gcup" value="${curStore?.gift_cup_threshold ?? ""}" ${locked?"readonly":""} placeholder="—" style="width:66px;text-align:center;font-size:17px"/>
+            <span>送 1 ·</span>
+            <span class="dim">贈品限定</span>
+            <select id="gcupp" ${locked?"disabled":""} style="min-width:130px;font-size:16px">
+              <option value="">不限(店家自選)</option>
+              ${products.filter(p=>p.is_active&&(p.unit||"").includes("杯")).map(p=>
+                `<option value="${p.id}" ${curStore?.gift_cup_product_id===p.id?"selected":""}>${esc(p.name)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="row" style="margin-bottom:0">
+            ${locked?'<span class="dim" style="font-size:14px">🔒 解鎖後可修改</span>':`<button class="btn" onclick="saveGift()">儲存搭贈設定</button>`}
+          </div>
+        </div>`:""}
+        <div class="card"><table>
+          <tr><th>商品</th><th style="text-align:right">基礎價</th><th style="text-align:right">此店價格(留空=用基礎價)</th><th></th></tr>
+          ${products.filter(p=>p.is_active && (!pOnlyCustom || customPrices[p.id]!=null)).map(p=>{
+            const has = customPrices[p.id]!=null;
+            const ucls = p.unit.includes('袋')?'bag':p.unit.includes('杯')?'cup':'other';
+            return `<tr>
+              <td style="font-size:17px"><span class="utag ${ucls}">${esc(p.unit)}</span>${esc(p.name)}</td>
+              <td style="text-align:right;font-size:17px" class="dim mono">$${p.base_price}</td>
+              <td style="text-align:right"><input type="number" id="cp_${p.id}" value="${has?customPrices[p.id]:""}" placeholder="${p.base_price}" style="width:96px;text-align:right;font-size:17px;${has?'border-color:var(--amber);color:var(--amber)':''}"/></td>
+              <td><button class="btn2" onclick="saveCP('${p.id}')">儲存</button></td>
+            </tr>`}).join("")}
+        </table></div>
+`;
+    }
+
+    // ============ 換貨 ============
+    if (tab==="exchange"){
+      const d = await api("exchanges",{params:{month:exMonth}});
+      c.innerHTML = `
+        <div class="row">
+          <label class="dim">月份</label>
+          <input type="month" value="${exMonth}" onchange="chgExMonth(this.value)" />
+          <button class="btn2" onclick="exportExchange()">📥 匯出</button>
+        </div>
+        <div class="card">
+          <div style="display:flex;gap:14px;flex-wrap:wrap">
+            <div><div class="dim" style="font-size:14px">回收(過期)</div><b class="red" style="font-size:22px">${d.totalReturned}</b></div>
+            <div><div class="dim" style="font-size:14px">補貨(換新)</div><b class="green" style="font-size:22px">${d.totalReplaced}</b></div>
+            <div><div class="dim" style="font-size:14px">換貨次數</div><b style="font-size:22px">${d.rows.length}</b></div>
+          </div>
+        </div>
+        ${d.byStore.length?`<div class="card">
+          <b>各店損耗排行</b>
+          <table style="margin-top:8px">
+            <tr><th>店家</th><th style="text-align:right">回收</th><th style="text-align:right">補貨</th><th style="text-align:right">次數</th></tr>
+            ${d.byStore.map(s=>`<tr>
+              <td><span class="mono green">${esc(s.code)}</span> ${esc(s.name)}</td>
+              <td style="text-align:right" class="mono red">${s.returned}</td>
+              <td style="text-align:right" class="mono">${s.replaced}</td>
+              <td style="text-align:right" class="mono dim">${s.times}</td>
+            </tr>`).join("")}
+          </table>
+        </div>`:""}
+        <div class="card">
+          <b>換貨明細</b>
+          <table style="margin-top:8px">
+            <tr><th>日期</th><th>店家 / 品項</th><th style="text-align:right">回收</th><th style="text-align:right">補貨</th><th>登記者</th><th></th></tr>
+            ${d.rows.length===0?'<tr><td colspan="6" class="dim">本月無換貨紀錄</td></tr>':""}
+            ${d.rows.map(r=>`<tr>
+              <td class="mono dim" style="font-size:14px">${r.date.slice(5)}</td>
+              <td><span class="mono green">${esc(r.storeCode)}</span> ${esc(r.storeName)}<div class="dim" style="font-size:14px">${esc(r.productName)} ${esc(r.unit)}${r.note?" · "+esc(r.note):""}</div></td>
+              <td style="text-align:right" class="mono red">${r.returned}</td>
+              <td style="text-align:right" class="mono">${r.replaced}</td>
+              <td class="dim" style="font-size:14px">${esc(r.by)}</td>
+              <td>${locked?"":`<button class="danger" onclick="delExchange('${r.id}')">刪除</button>`}</td>
+            </tr>`).join("")}
+          </table>
+        </div>`;
+      window._exRows = d.rows;
+    }
+
+    // ============ 發票 ============
+    if (tab==="invoice"){
+      const d = await api("invoice_list",{params:{month:invoiceMonth}});
+      invoiceRows = d.rows;
+      const total = invoiceRows.reduce((s,r)=>s+r.amount,0);
+      stores = await api("stores");
+      c.innerHTML = `
+        <div class="row">
+          <label class="dim">開票月份</label>
+          <input type="month" value="${invoiceMonth}" onchange="chgInvoiceMonth(this.value)" />
+          <button class="btn2" onclick="exportInvoice()">📥 匯出開票清單</button>
+        </div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <b>${invoiceMonth} 開票清單</b>
+            <b class="green" style="font-size:18px">$${total.toLocaleString()}</b>
+          </div>
+          <table>
+            <tr><th>店號 / 店名</th><th>統編</th><th>抬頭</th><th style="text-align:right">筆數</th><th style="text-align:right">金額</th></tr>
+            ${invoiceRows.length===0?'<tr><td colspan="5" class="dim">尚未設定需開發票的店家(請於下方設定)</td></tr>':""}
+            ${invoiceRows.map(r=>`<tr>
+              <td><span class="mono green">${esc(r.store_code)}</span> ${esc(r.name)}</td>
+              <td class="mono">${esc(r.tax_id)||'<span class="red">未填</span>'}</td>
+              <td>${esc(r.invoice_title)||'<span class="dim">—</span>'}</td>
+              <td style="text-align:right" class="mono dim">${r.orderCount}</td>
+              <td style="text-align:right" class="mono"><b>$${r.amount.toLocaleString()}</b></td>
+            </tr>`).join("")}
+          </table>
+        </div>
+        <div class="card">
+          <b>發票設定</b>
+          <div class="dim" style="font-size:14px;margin:4px 0 8px">${locked?"🔒 唯讀模式,點右上解鎖後可設定":"勾選需開發票的店家,並填寫統編與抬頭"}</div>
+          <table>
+            <tr><th>店號 / 店名</th><th style="text-align:center">開發票</th><th>統一編號</th><th>發票抬頭</th></tr>
+            ${stores.map(s=>`<tr>
+              <td><span class="mono green">${esc(s.store_code)}</span> ${esc(s.name)}</td>
+              <td style="text-align:center"><input type="checkbox" ${s.needs_invoice?"checked":""} ${locked?"disabled":""}
+                style="width:20px;height:20px" onchange="updStoreField('${s.id}','needs_invoice',this.checked)"/></td>
+              <td><input value="${esc(s.tax_id||"")}" ${locked?"readonly":""} placeholder="8碼" style="width:90px" onchange="updStoreField('${s.id}','tax_id',this.value)"/></td>
+              <td><input value="${esc(s.invoice_title||"")}" ${locked?"readonly":""} placeholder="公司抬頭" style="width:150px" onchange="updStoreField('${s.id}','invoice_title',this.value)"/></td>
+            </tr>`).join("")}
+          </table>
+        </div>`;
+    }
+
+    // ============ 司機 ============
+    if (tab==="drivers"){
+      drivers = await api("drivers");
+      c.innerHTML = `
+        <div class="card">
+          <b>新增司機</b>
+          <div class="row" style="margin-top:8px">
+            <input id="nd_name" placeholder="姓名" style="width:90px"/>
+            <input id="nd_car" placeholder="車號" style="width:100px"/>
+            <input id="nd_phone" placeholder="電話" style="width:120px"/>
+            <input id="nd_acc" placeholder="登入帳號" style="width:110px"/>
+            <input id="nd_pw" placeholder="登入密碼" type="password" style="width:110px"/>
+            <button class="btn" onclick="createDriver()">新增</button>
+          </div>
+        </div>
+        ${drivers.length===0?'<div class="card dim">尚無司機</div>':""}
+        ${drivers.map(d=>`
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+              <div>
+                <b>${esc(d.name)}</b>
+                <span class="dim mono" style="margin-left:8px">🚚 ${esc(d.car_no||"-")}</span>
+                <span class="dim mono" style="margin-left:8px">${esc(d.account)}</span>
+                ${d.status==='active'?'<span class="badge b-green">在職</span>':'<span class="badge b-red">停用</span>'}
+              </div>
+              <div style="white-space:nowrap">
+                <button class="btn2" onclick="resetDriverPw('${d.id}','${esc(d.name)}')">重設密碼</button>
+                <button class="btn2" onclick="toggleDriver('${d.id}','${d.status}')">${d.status==='active'?'停用':'啟用'}</button>
+                <button class="danger" onclick="deleteDriver('${d.id}','${esc(d.name)}')">刪除</button>
+              </div>
+            </div>
+            <div style="margin-top:10px;padding-top:10px;border-top:1px solid #2a2d30">
+              <span class="dim" style="font-size:14px">負責路線:</span>
+              ${(d.routes||[]).map(r=>`
+                <span class="badge ${r.day_group?'b-amber':'b-green'}" style="margin:2px">
+                  ${esc(r.route_code)}${r.day_group?` · ${esc(r.day_group)}(代班)`:'(全包)'}
+                  <span class="x" onclick="delDriverRoute('${r.id}')">✕</span>
+                </span>`).join("") || '<span class="dim" style="font-size:14px">尚未指派</span>'}
+              <div class="row" style="margin-top:8px;margin-bottom:0">
+                <select id="dr_route_${d.id}" style="width:80px">
+                  <option value="">路線</option>${ROUTE_CODES.map(r=>`<option>${r}</option>`).join("")}
+                </select>
+                <select id="dr_dg_${d.id}" style="width:130px">
+                  <option value="">全包(不分梯次)</option>
+                  ${DAY_GROUPS.map(dg=>`<option>${dg}</option>`).join("")}
+                </select>
+                <button class="btn2" onclick="addDriverRoute('${d.id}')">加入路線</button>
+              </div>
+            </div>
+          </div>`).join("")}`;
+    }
+
+    // ============ 路線 ============
+    if (tab==="routes"){
+      const data = await api("routes_overview");
+      window.routesData = data;
+      const routeKeys = Object.keys(data.routes).sort();
+      c.innerHTML = `
+        ${routeKeys.length===0?'<div class="card dim">尚無店家路線資料</div>':""}
+        ${routeKeys.map(rc=>{
+          const groups = data.routes[rc];
+          const totalStores = Object.values(groups).reduce((s,arr)=>s+arr.length,0);
+          const driversOnRoute = data.driverRoutes.filter(dr=>dr.route_code===rc);
+          return `
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <div>
+                <span class="badge b-green" style="font-size:16px;font-weight:700">路線 ${esc(rc)}</span>
+                <span class="dim" style="margin-left:8px">共 ${totalStores} 間店家</span>
+              </div>
+              <div class="dim" style="font-size:14px">
+                ${driversOnRoute.map(dr=>`🚚 ${esc(dr.drivers?.name||"?")}${dr.day_group?`(${esc(dr.day_group)})`:""}`).join(" · ")||"未指派司機"}
+              </div>
+            </div>
+            ${Object.keys(groups).sort().map(dg=>`
+              <details>
+                <summary>梯次 ${esc(dg)} — ${groups[dg].length} 間店家(在序號框輸入數字即插入該位置,其餘自動順移)</summary>
+                ${groups[dg].map((s,i)=>`<div class="storeline" style="display:flex;align-items:center;gap:8px">
+                  <input type="number" inputmode="numeric" min="1" max="${groups[dg].length}" value="${i+1}"
+                    ${locked?"readonly":""} style="width:52px;text-align:center"
+                    onchange="setRouteStorePos('${esc(rc)}','${esc(dg)}',${i},this.value)" onfocus="this.select()"/>
+                  <span class="mono green">${esc(s.code)}</span> ${esc(s.name)} ${s.status!=='active'?'<span class="red">(停用)</span>':""}
+                </div>`).join("")}
+              </details>`).join("")}
+          </div>`}).join("")}
+        <div class="dim" style="font-size:14px">※ 店家的路線/梯次在「店家」分頁設定;司機的路線指派在「司機」分頁設定</div>`;
+    }
+  } catch(e){
+    if (String(e.message)!=="unauthorized") c.innerHTML = `<div class="card red">載入失敗:${esc(e.message)}</div>`;
+  }
 }
 
 // ====== 操作 ======
-window.chgDate = (v)=>{ viewDate=v; builder=null; sessionStorage.removeItem("driverFocus"); load(); };
-async function loadPrices(storeId){
+window.chgDate = (v)=>{ orderDate=v; loadTab(); };
+window.chgStore = (v)=>{ selStore=v; loadTab(); };
+window.setF = (k,v)=>{
+  if (k==='route') fRoute=v; else if (k==='day') fDay=v; else fKeyword=v;
+  if (k==='kw'){ // 搜尋不重新抓資料,只重繪
+    clearTimeout(window._kwT);
+    window._kwT = setTimeout(()=>{ loadTab().then(()=>{ const el=document.getElementById("fkw"); if(el){el.focus(); el.setSelectionRange(el.value.length,el.value.length);} }); }, 250);
+  } else loadTab();
+};
+window.setP = (k,v)=>{
+  if (k==='route'){ pRoute=v; selStore=""; }
+  else if (k==='day'){ pDay=v; selStore=""; }
+  else pOnlyCustom=v;
+  loadTab();
+};
+
+window.createStore = async ()=>{
+  const g = id=>document.getElementById(id).value.trim();
+  try{
+    await api("create_store",{body:{store_code:g("ns_code"),name:g("ns_name"),address:g("ns_addr"),route_code:g("ns_route"),day_group:g("ns_dg"),note:g("ns_note")}});
+    loadTab();
+  }catch(e){alert(e.message)}
+};
+window.updStoreField = async (id,field,v)=>{
+  const val = (typeof v === "boolean") ? v : v.trim();
+  if (field==='name' && !val) return alert("店名不可為空白");
   try {
-    const r = await api("store_prices",{params:{storeId}});
-    return Array.isArray(r) ? { products:r, giftBag:null, giftCup:null } : r;
-  } catch(e){ alert("載入價格失敗:"+e.message); return null; }
-}
-function bGiftInfo(){
-  let bagQty=0, cupQty=0, selBag=0, selCup=0;
-  for (const p of builder.priceList){
-    const q = builder.cart[p.id]||0, g = builder.giftCart[p.id]||0;
-    const u = p.unit||"";
-    if (u.includes("袋")){ bagQty+=q; selBag+=g; }
-    else if (u.includes("杯")){ cupQty+=q; selCup+=g; }
-  }
-  const bagTh = builder.giftBag, cupTh = builder.giftCup;
-  return { bagTh, cupTh, selBag, selCup,
-    bagGift: (bagTh&&bagTh>0)?Math.floor(bagQty/bagTh):0,
-    cupGift: (cupTh&&cupTh>0)?Math.floor(cupQty/cupTh):0 };
-}
-window.setBuilderDate = (val)=>{ if(builder) builder.date = val; render(); };
-window.chgBGift = (pid,d,cls)=>{
-  const g = bGiftInfo();
-  const max = cls==="袋"?g.bagGift:g.cupGift;
-  const sel = cls==="袋"?g.selBag:g.selCup;
-  const cur = builder.giftCart[pid]||0;
-  if (d>0 && sel>=max) return alert(`${cls}裝贈品最多 ${max}`);
-  builder.giftCart[pid] = Math.max(0, cur+d);
-  if (!builder.giftCart[pid]) delete builder.giftCart[pid];
-  render();
+    await api("update_store",{body:{id,[field]:val}});
+    if (field==='needs_invoice') loadTab(); // 開票清單需重整
+  } catch(e){ alert("儲存失敗:"+e.message); loadTab(); }
 };
-
-function isProvisional(){
-  if (!builder) return false;
-  const s = findStore(builder.storeId);
-  return !!(s && s.order && s.order.status==='provisional');
-}
-window.openBuilder = async (storeId,mode,orderId,assignSelf)=>{
-  const r = await loadPrices(storeId);
-  if (!r) return;
-  builder={storeId,mode,orderId,cart:{},giftCart:{},priceList:r.products,
-           giftBag:r.giftBag,giftCup:r.giftCup,
-           giftBagProductId:r.giftBagProductId,giftCupProductId:r.giftCupProductId,
-           date:viewDate,assignSelf:!!assignSelf};
-  render();
+window.toggleStore = async (id,status)=>{
+  await api("update_store",{body:{id,status:status==='active'?'suspended':'active'}}); loadTab();
 };
-window.openEditBuilder = async (storeId,orderId)=>{
-  const s = findStore(storeId);
-  const cart = {}, giftCart = {};
-  if (s && s.order) for (const it of s.order.items){
-    if (it.isGift) giftCart[it.productId]=it.qty; else cart[it.productId]=it.qty;
-  }
-  const r = await loadPrices(storeId);
-  if (!r) return;
-  builder={storeId,mode:'edit',orderId,cart,giftCart,priceList:r.products,
-           giftBag:r.giftBag,giftCup:r.giftCup,
-           giftBagProductId:r.giftBagProductId,giftCupProductId:r.giftCupProductId};
-  render();
+window.deleteStore = async (id,name)=>{
+  if (!confirm(`確定要永久刪除店家「${name}」?此動作無法復原`)) return;
+  try{ await api("delete_store",{body:{id}}); loadTab(); }catch(e){alert(e.message)}
 };
-window.closeBuilder = ()=>{ builder=null; render(); };
-window.chgQty = (pid,d)=>{ builder.cart[pid]=Math.max(0,(builder.cart[pid]||0)+d); render(); };
-window.setBQty = (pid,v)=>{ builder.cart[pid]=Math.max(0,Math.floor(Number(v)||0)); render(); };
-
-let submitting = false; // 防連點重複送出
-window.submitBuilder = async ()=>{
-  if (submitting) return;
-  const items = Object.entries(builder.cart).filter(([,q])=>q>0).map(([productId,qty])=>({productId,qty}));
-  for (const [productId,qty] of Object.entries(builder.giftCart||{})) {
-    if (qty>0) items.push({productId,qty,isGift:true});
-  }
-  if (!items.length) {
-    // 預抓訂單允許全部歸零(代表店家最終不叫貨)
-    if (!(builder.mode==="edit" && isProvisional())) return alert("請選擇品項");
-    if (!confirm("全部歸零將取消此筆預抓,確定?")) return;
-  }
-  submitting = true;
-  // 按鈕即時變灰,避免視覺上還能按
-  const btns = document.querySelectorAll(".rowbtns button");
-  btns.forEach(b=>{ b.disabled = true; });
-  const submitBtn = btns[btns.length-1];
-  if (submitBtn) submitBtn.textContent = "送出中…";
+window.createProduct = async ()=>{
+  const g = id=>document.getElementById(id).value.trim();
+  try{
+    await api("create_product",{body:{name:g("np_name"),unit:g("np_unit"),base_price:g("np_price")}});
+    loadTab();
+  }catch(e){alert(e.message)}
+};
+window.updPrice = async (id,v)=>{ await api("update_product",{body:{id,base_price:v}}); };
+window.updProductField = async (id,field,v)=>{
+  if (!v.trim()) return alert("不可為空白");
+  await api("update_product",{body:{id,[field]:v.trim()}});
+};
+window.moveProduct = async (index,dir)=>{
+  const j = index + dir;
+  if (j < 0 || j >= products.length) return;
+  [products[index], products[j]] = [products[j], products[index]];
   try {
-    if (builder.mode==="new" || builder.mode==="pre"){
-      await api("create_onsite",{body:{
-        storeId:builder.storeId, date:builder.date||viewDate, items,
-        provisional:builder.mode==="pre",
-        assignSelf: !!builder.assignSelf,   // 臨時加店→指派給自己配送
-      }});
-    } else if (builder.mode==="edit"){
-      await api("edit_order",{body:{orderId:builder.orderId,storeId:builder.storeId,items}});
-    } else {
-      await api("addon",{body:{orderId:builder.orderId,storeId:builder.storeId,items}});
-    }
-    const sid = builder.storeId;
-    builder=null;
-    load(sid);
-  } catch(e){
-    alert(e.message);
-    render(); // 還原按鈕狀態
-  } finally {
-    submitting = false;
-  }
+    await api("reorder_products",{body:{ids:products.map(p=>p.id)}});
+    loadTab();
+  } catch(e){ alert("排序失敗:"+e.message); loadTab(); }
+};
+window.toggleProduct = async (id,active)=>{
+  await api("update_product",{body:{id,is_active:!active}}); loadTab();
+};
+window.deleteProduct = async (id,name)=>{
+  if (!confirm(`確定要永久刪除商品「${name}」?此動作無法復原`)) return;
+  try{ await api("delete_product",{body:{id}}); loadTab(); }catch(e){alert(e.message)}
+};
+window.saveGift = async ()=>{
+  const bag = document.getElementById("gbag").value.trim();
+  const cup = document.getElementById("gcup").value.trim();
+  const bagP = document.getElementById("gbagp").value;
+  const cupP = document.getElementById("gcupp").value;
+  try {
+    await api("update_store",{body:{id:selStore,
+      gift_bag_threshold: bag===""?null:Number(bag),
+      gift_cup_threshold: cup===""?null:Number(cup),
+      gift_bag_product_id: bagP||null,
+      gift_cup_product_id: cupP||null}});
+    loadTab();
+  } catch(e){ alert("儲存失敗:"+e.message); }
+};
+window.saveCP = async (pid)=>{
+  const v = document.getElementById("cp_"+pid).value.trim();
+  await api("set_custom_price",{body:{storeId:selStore,productId:pid,price:v}});
+  loadTab();
+};
+window.cancelOrder = async (id)=>{
+  const reason = prompt("刪除原因(將記錄於異動log):");
+  if (reason===null) return;
+  await api("cancel_order",{body:{orderId:id,reason}}); loadTab();
 };
 
-window.markDelivered = async (orderId, storeId)=>{
-  if (submitting) return;
-  if (!confirm("確認此店已送達?")) return;
-  submitting = true;
-  try { await api("mark_delivered",{body:{orderId}}); load(storeId); }
-  catch(e){ alert(e.message); }
-  finally { submitting = false; }
+let editState = null; // {orderId, cart:{productId:qty}, priceList, storeName}
+
+window.editOrder = async (orderId)=>{
+  try {
+    const d = await api("order_detail",{params:{orderId}});
+    const cart = {};
+    (d.order.order_items||[]).forEach(it=>{ cart[it.product_id]=Number(it.quantity); });
+    editState = { orderId, cart, priceList:d.priceList,
+      storeName:`[${d.order.stores.store_code}] ${d.order.stores.name}`,
+      deliveryDate:d.order.delivery_date };
+    renderEditModal();
+  } catch(e){ alert("載入失敗:"+e.message); }
 };
 
-window.openAddStore = ()=>{
+function renderEditModal(){
+  const es = editState;
+  let total = 0;
+  for (const p of es.priceList){ total += (es.cart[p.id]||0)*p.price; }
   const html = `
-    <div style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:flex;align-items:flex-end"
-         onclick="if(event.target===this)closeAddStore()">
-      <div style="background:var(--card);width:100%;max-height:88vh;overflow-y:auto;border-radius:16px 16px 0 0;padding:16px">
-        <b style="font-size:17px">➕ 臨時加店</b>
-        <div class="dim" style="font-size:14px;margin:4px 0 12px">先搜尋既有店家;找不到再手動新增</div>
-        <input id="as_kw" placeholder="輸入店號或店名搜尋" style="width:100%;font-size:16px;padding:11px" oninput="searchStore(this.value)"/>
-        <div id="as_result" style="margin-top:8px"></div>
-        <div style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--border)">
-          <b style="font-size:15px">找不到?新增臨時店家</b>
-          <div class="dim" style="font-size:14px;margin:3px 0 8px">僅供今日一次性使用</div>
-          <input id="as_name" placeholder="店名(必填)" style="width:100%;font-size:16px;padding:10px;margin-bottom:8px"/>
-          <input id="as_addr" placeholder="地址" style="width:100%;font-size:16px;padding:10px;margin-bottom:8px"/>
-          <input id="as_phone" placeholder="電話(選填)" style="width:100%;font-size:16px;padding:10px;margin-bottom:12px"/>
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeEdit()">
+      <div style="background:var(--card);width:100%;max-width:520px;max-height:88vh;border-radius:16px 16px 0 0;display:flex;flex-direction:column">
+        <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+          <b>編輯訂單</b>
+          <div class="dim" style="font-size:14px;margin-top:2px">${esc(es.storeName)} · 配送 ${es.deliveryDate}</div>
+        </div>
+        <div style="overflow-y:auto;padding:8px 16px;flex:1">
+          ${es.priceList.map(p=>{
+            const q = es.cart[p.id]||0;
+            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #2a2d30">
+              <div><div>${esc(p.name)}</div><div class="dim" style="font-size:14px">${esc(p.unit)} · $${p.price}</div></div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <button class="btn2" style="width:34px;height:34px;border-radius:50%" onclick="editQty('${p.id}',-1)">−</button>
+                <input type="number" inputmode="numeric" min="0" value="${q}" style="width:56px;height:34px;text-align:center"
+                  onchange="editSetQty('${p.id}',this.value)" onfocus="this.select()"/>
+                <button class="btn" style="width:34px;height:34px;border-radius:50%;padding:0" onclick="editQty('${p.id}',1)">＋</button>
+              </div>
+            </div>`}).join("")}
+        </div>
+        <div style="padding:14px 16px;border-top:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+            <span class="dim">訂單總額</span><b style="font-size:18px">$${total.toLocaleString()}</b>
+          </div>
           <div style="display:flex;gap:8px">
-            <button class="btn2" style="flex:1;padding:12px" onclick="closeAddStore()">取消</button>
-            <button class="btn" style="flex:2;padding:12px" onclick="createTempStore()">新增並建單</button>
+            <button class="btn2" style="flex:1" onclick="closeEdit()">取消</button>
+            <button class="btn" style="flex:2" onclick="saveEdit()">儲存變更</button>
           </div>
         </div>
       </div>
     </div>`;
-  let m = document.getElementById("addModal");
-  if (!m){ m=document.createElement("div"); m.id="addModal"; document.body.appendChild(m); }
-  m.innerHTML = html;
-  setTimeout(()=>document.getElementById("as_kw")?.focus(), 100);
-};
-window.closeAddStore = ()=>{ const m=document.getElementById("addModal"); if(m)m.innerHTML=""; };
+  let modal = document.getElementById("editModal");
+  if (!modal){ modal=document.createElement("div"); modal.id="editModal"; document.body.appendChild(modal); }
+  modal.innerHTML = html;
+}
 
-let searchTimer = null;
-window.searchStore = (kw)=>{
-  clearTimeout(searchTimer);
-  const box = document.getElementById("as_result");
-  if (!kw.trim()){ box.innerHTML=""; return; }
-  searchTimer = setTimeout(async ()=>{
-    try {
-      const list = await api("search_stores",{params:{kw:kw.trim()}});
-      box.innerHTML = list.length ? list.map(s=>`
-        <div class="srow" onclick="pickStore('${s.id}')">
-          <span><span class="mono green" style="font-size:14px">${esc(s.store_code)}</span> ${esc(s.name)}
-            <div class="dim" style="font-size:13px">${esc(s.address||"")}</div></span>
-          <span class="dim" style="font-size:13px;white-space:nowrap">${esc(s.route_code||"")} ${esc(s.day_group||"")}</span>
-        </div>`).join("") : '<div class="dim" style="padding:10px;font-size:15px">查無此店家</div>';
-    } catch(e){ box.innerHTML = `<div class="red" style="padding:10px">搜尋失敗:${esc(e.message)}</div>`; }
-  }, 300);
-};
-
-window.pickStore = async (storeId)=>{
-  closeAddStore();
-  await openBuilder(storeId,'new',null,true);
-};
-
-window.createTempStore = async ()=>{
-  if (submitting) return;
-  const name = document.getElementById("as_name").value.trim();
-  const address = document.getElementById("as_addr").value.trim();
-  const phone = document.getElementById("as_phone").value.trim();
-  if (!name) return alert("請填寫店名");
-  submitting = true;
+window.editQty = (pid,d)=>{ editState.cart[pid]=Math.max(0,(editState.cart[pid]||0)+d); renderEditModal(); };
+window.editSetQty = (pid,v)=>{ editState.cart[pid]=Math.max(0,Math.floor(Number(v)||0)); renderEditModal(); };
+window.closeEdit = ()=>{ const m=document.getElementById("editModal"); if(m)m.innerHTML=""; editState=null; };
+window.saveEdit = async ()=>{
+  const reason = prompt("修改原因(將記錄於異動log):");
+  if (reason===null) return;
+  const items = Object.entries(editState.cart).map(([productId,quantity])=>({productId,quantity}));
   try {
-    const r = await api("create_temp_store",{body:{name,address,phone}});
-    closeAddStore();
-    submitting = false;
-    await openBuilder(r.store.id,'new',null,true);
-  } catch(e){ alert("新增失敗:"+e.message); submitting = false; }
+    await api("update_order_items",{body:{orderId:editState.orderId,items,reason}});
+    closeEdit();
+    loadTab();
+  } catch(e){ alert("儲存失敗:"+e.message); }
 };
 
-window.openExchange = async (storeId)=>{
-  const r = await loadPrices(storeId);
-  if (!r) return;
-  const list = r.products || [];
-  const cups = list.filter(p=>(p.unit||"").includes("杯"));
-  const opts = (cups.length?cups:list).map(p=>`<option value="${p.id}">${esc(p.name)} (${esc(p.unit)})</option>`).join("");
-  const html = `
-    <div style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:flex;align-items:flex-end"
-         onclick="if(event.target===this)closeExchange()">
-      <div style="background:var(--card);width:100%;border-radius:16px 16px 0 0;padding:16px">
-        <b style="font-size:17px">🔄 過期換貨登記</b>
-        <div class="dim" style="font-size:14px;margin:4px 0 12px">回收過期品、補新品給店家(不計費用)</div>
-        <div style="margin-bottom:10px">
-          <label class="dim" style="font-size:14px">品項</label>
-          <select id="ex_pid" style="width:100%;margin-top:4px;font-size:16px;padding:9px">${opts}</select>
-        </div>
-        <div style="display:flex;gap:10px;margin-bottom:10px">
-          <div style="flex:1">
-            <label class="dim" style="font-size:14px">回收(過期)</label>
-            <input id="ex_ret" type="number" inputmode="numeric" min="0" value="0" style="width:100%;margin-top:4px;font-size:18px;padding:9px;text-align:center" onfocus="this.select()"/>
-          </div>
-          <div style="flex:1">
-            <label class="dim" style="font-size:14px">補貨(新品)</label>
-            <input id="ex_rep" type="number" inputmode="numeric" min="0" value="0" style="width:100%;margin-top:4px;font-size:18px;padding:9px;text-align:center" onfocus="this.select()"/>
-          </div>
-        </div>
-        <input id="ex_note" placeholder="備註(選填)" style="width:100%;margin-bottom:12px;font-size:15px;padding:9px"/>
-        <div style="display:flex;gap:8px">
-          <button class="btn2" style="flex:1;padding:12px" onclick="closeExchange()">取消</button>
-          <button class="btn" style="flex:2;padding:12px" onclick="submitExchange('${storeId}')">確認登記</button>
-        </div>
-      </div>
-    </div>`;
-  let m = document.getElementById("exModal");
-  if (!m){ m=document.createElement("div"); m.id="exModal"; document.body.appendChild(m); }
-  m.innerHTML = html;
+window.chgInvoiceMonth = (v)=>{ invoiceMonth=v; loadTab(); };
+window.chgExMonth = (v)=>{ exMonth=v; loadTab(); };
+window.delExchange = async (id)=>{
+  if (!confirm("確定刪除這筆換貨紀錄?")) return;
+  try { await api("delete_exchange",{body:{id}}); loadTab(); } catch(e){ alert(e.message); }
 };
-window.closeExchange = ()=>{ const m=document.getElementById("exModal"); if(m)m.innerHTML=""; };
-window.submitExchange = async (storeId)=>{
-  if (submitting) return;
-  const productId = document.getElementById("ex_pid").value;
-  const returned = document.getElementById("ex_ret").value;
-  const replaced = document.getElementById("ex_rep").value;
-  const note = document.getElementById("ex_note").value;
-  if (Number(returned)<=0 && Number(replaced)<=0) return alert("請填寫回收或補貨數量");
-  submitting = true;
-  try {
-    await api("add_exchange",{body:{storeId,productId,date:viewDate,returned,replaced,note}});
-    closeExchange();
-    load(storeId);
-  } catch(e){ alert("登記失敗:"+e.message); }
-  finally { submitting = false; }
+window.exportExchange = ()=>{
+  const rows = window._exRows || [];
+  if (!rows.length) return alert("沒有資料可匯出");
+  const out = [["日期","店號","店名","品項","單位","回收","補貨","登記者","備註"]];
+  for (const r of rows) out.push([r.date,r.storeCode,r.storeName,r.productName,r.unit,r.returned,r.replaced,r.by,r.note]);
+  const ws = XLSX.utils.aoa_to_sheet(out);
+  ws['!cols'] = [{wch:11},{wch:10},{wch:16},{wch:14},{wch:8},{wch:8},{wch:8},{wch:10},{wch:18}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "換貨紀錄");
+  XLSX.writeFile(wb, `換貨紀錄_${exMonth}.xlsx`);
 };
 
-// ====== 記住目前檢視位置(手機瀏覽器閒置後重新載入仍能回到原處) ======
-let scrollTimer = null;
-window.addEventListener("scroll", ()=>{
-  clearTimeout(scrollTimer);
-  scrollTimer = setTimeout(()=>{
-    const cards = document.querySelectorAll(".scard");
-    const mid = window.innerHeight/2;
-    let best=null, bestD=Infinity;
-    for (const c of cards){
-      const r = c.getBoundingClientRect();
-      const d = Math.abs(r.top + r.height/2 - mid);
-      if (d < bestD){ bestD=d; best=c; }
+window.exportInvoice = ()=>{
+  if (!invoiceRows.length) return alert("沒有資料可匯出");
+  const rows = [["店號","店名","統一編號","發票抬頭","訂單筆數","開票金額"]];
+  let total = 0;
+  for (const r of invoiceRows){
+    rows.push([r.store_code, r.name, r.tax_id, r.invoice_title, r.orderCount, r.amount]);
+    total += r.amount;
+  }
+  rows.push(["","","","","合計", total]);
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:10},{wch:16},{wch:12},{wch:20},{wch:10},{wch:12}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "開票清單");
+  XLSX.writeFile(wb, `開票清單_${invoiceMonth}.xlsx`);
+};
+
+window.exportOrders = ()=>{
+  if (!orders.length) return alert("目前沒有資料可匯出");
+  const rows = [["店號","店名","配送日","下單日","狀態","來源","商品","數量","單價","小計","訂單總額"]];
+  for (const o of orders){
+    const items = o.order_items||[];
+    if (items.length===0){
+      rows.push([o.stores.store_code,o.stores.name,o.delivery_date,o.order_date,
+        o.status==='cancelled'?'已刪除':'正常',o.source==='on_site'?'現場建單':'店家下單',
+        '','','','',o.total_amount]);
+    } else {
+      items.forEach((it,i)=>{
+        rows.push([
+          i===0?o.stores.store_code:'', i===0?o.stores.name:'',
+          i===0?o.delivery_date:'', i===0?o.order_date:'',
+          i===0?(o.status==='cancelled'?'已刪除':'正常'):'',
+          i===0?(o.source==='on_site'?'現場建單':'店家下單'):'',
+          it.products.name, it.quantity, it.unit_price, it.quantity*it.unit_price,
+          i===0?o.total_amount:'',
+        ]);
+      });
     }
-    if (best) sessionStorage.setItem("driverFocus", best.id.replace(/^s-/,""));
-  }, 250);
-});
+  }
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:10},{wch:14},{wch:11},{wch:11},{wch:8},{wch:10},{wch:14},{wch:6},{wch:8},{wch:8},{wch:10}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "訂單");
+  const label = orderDate || "全部日期";
+  XLSX.writeFile(wb, `訂單匯出_${label}.xlsx`);
+};
+
+// ---- 司機操作 ----
+window.createDriver = async ()=>{
+  const g = id=>document.getElementById(id).value.trim();
+  try{
+    await api("create_driver",{body:{name:g("nd_name"),car_no:g("nd_car"),phone:g("nd_phone"),account:g("nd_acc"),password:g("nd_pw")}});
+    loadTab();
+  }catch(e){alert(e.message)}
+};
+window.toggleDriver = async (id,status)=>{
+  await api("update_driver",{body:{id,status:status==='active'?'inactive':'active'}}); loadTab();
+};
+window.deleteDriver = async (id,name)=>{
+  if (!confirm(`確定要刪除司機「${name}」?其路線指派也會一併移除`)) return;
+  try{ await api("delete_driver",{body:{id}}); loadTab(); }catch(e){alert(e.message)}
+};
+window.resetDriverPw = async (id,name)=>{
+  const pw = prompt(`輸入「${name}」的新密碼:`);
+  if (!pw) return;
+  await api("update_driver",{body:{id,password:pw}});
+  alert("密碼已更新");
+};
+window.addDriverRoute = async (driverId)=>{
+  const rc = document.getElementById("dr_route_"+driverId).value;
+  const dg = document.getElementById("dr_dg_"+driverId).value;
+  if (!rc) return alert("請選擇路線");
+  try{ await api("add_driver_route",{body:{driverId,route_code:rc,day_group:dg||null}}); loadTab(); }catch(e){alert(e.message)}
+};
+window.delDriverRoute = async (id)=>{
+  await api("delete_driver_route",{body:{id}}); loadTab();
+};
+window.setRouteStorePos = async (rc,dg,i,val)=>{
+  const arr = window.routesData.routes[rc][dg];
+  let pos = Math.floor(Number(val)) - 1; // 目標位置(0-based)
+  if (!Number.isFinite(pos)) { loadTab(); return; }
+  pos = Math.max(0, Math.min(arr.length - 1, pos));
+  if (pos === i) { loadTab(); return; }
+  const [moved] = arr.splice(i, 1); // 取出該店
+  arr.splice(pos, 0, moved);        // 插入目標位置,其餘自動順移
+  try {
+    await api("reorder_route_stores",{body:{ids:arr.map(s=>s.id)}});
+    loadTab();
+  } catch(e){ alert("排序失敗:"+e.message); loadTab(); }
+};
 
 // ====== 啟動 ======
-if (CRED) load(sessionStorage.getItem("driverFocus")||undefined); else renderLogin();
+if (KEY) boot(); else renderLogin();
 </script>
 </body>
 </html>
