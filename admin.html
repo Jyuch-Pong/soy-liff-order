@@ -70,6 +70,7 @@ let stores = [], products = [], orders = [], summary = [], drivers = [], customP
 let selStore = "", orderDate = tomorrowTW();
 let invoiceMonth = new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"}).slice(0,7);
 let invoiceRows = [];
+let giftRules = [];
 let exMonth = new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"}).slice(0,7);
 let fRoute = "", fDay = "", fKeyword = "";   // 店家分頁篩選
 let pRoute = "", pDay = "", pOnlyCustom = false; // 客製價分頁篩選
@@ -296,6 +297,7 @@ async function loadTab(){
       customPrices = Object.fromEntries(cp.map(c=>[c.product_id, c.custom_price]));
       const customCount = Object.keys(customPrices).length;
       const curStore = stores.find(s=>s.id===selStore);
+      giftRules = selStore ? await api("gift_rules",{params:{storeId:selStore}}) : [];
       c.innerHTML = `
         <div class="card">
           <div class="row" style="margin-bottom:8px">
@@ -319,33 +321,35 @@ async function loadTab(){
           </div>`:""}
         </div>
         ${selStore?`<div class="card">
-          <b>🎁 搭贈設定</b>
-          <div class="dim" style="font-size:14px;margin:4px 0 8px">填數字啟用(如填10=每買10袋送1);留空=此店無搭贈。下單時湊滿數量會提示選贈品品項。</div>
-          <div class="row" style="margin-bottom:6px">
-            <span class="utag bag">袋</span><span>每買</span>
-            <input type="number" id="gbag" value="${curStore?.gift_bag_threshold ?? ""}" ${locked?"readonly":""} placeholder="—" style="width:66px;text-align:center;font-size:17px"/>
-            <span>送 1 ·</span>
-            <span class="dim">贈品限定</span>
-            <select id="gbagp" ${locked?"disabled":""} style="min-width:130px;font-size:16px">
-              <option value="">不限(店家自選)</option>
-              ${products.filter(p=>p.is_active&&(p.unit||"").includes("袋")).map(p=>
-                `<option value="${p.id}" ${curStore?.gift_bag_product_id===p.id?"selected":""}>${esc(p.name)}</option>`).join("")}
+          <b>🎁 搭贈規則</b>
+          <div class="dim" style="font-size:14px;margin:4px 0 8px">買指定品項滿N個,送指定品項1個。可設多條規則;留空=此店無搭贈。</div>
+          ${giftRules.length?`<table style="margin-bottom:10px">
+            <tr><th>買</th><th style="text-align:center">滿</th><th>送 1</th><th></th></tr>
+            ${giftRules.map(r=>{
+              const bp = products.find(p=>p.id===r.buy_product_id);
+              const gp = products.find(p=>p.id===r.gift_product_id);
+              return `<tr>
+                <td>${bp?`<span class="utag ${(bp.unit||"").includes("袋")?"bag":(bp.unit||"").includes("杯")?"cup":"other"}">${esc(bp.unit)}</span>${esc(bp.name)}`:"(已刪除商品)"}</td>
+                <td style="text-align:center" class="mono"><b>${r.buy_qty}</b></td>
+                <td>${gp?`<span class="utag ${(gp.unit||"").includes("袋")?"bag":(gp.unit||"").includes("杯")?"cup":"other"}">${esc(gp.unit)}</span>${esc(gp.name)}`:"(已刪除商品)"}</td>
+                <td style="text-align:right">${locked?"":`<button class="danger" onclick="delGiftRule('${r.id}')">刪除</button>`}</td>
+              </tr>`}).join("")}
+          </table>`:'<div class="dim" style="font-size:14px;margin-bottom:8px">此店尚未設定搭贈規則</div>'}
+          ${locked?'<div class="dim" style="font-size:14px">🔒 解鎖後可新增規則</div>':`
+          <div class="row" style="margin-bottom:0;align-items:center">
+            <span>買</span>
+            <select id="gr_buy" style="min-width:140px;font-size:16px">
+              ${products.filter(p=>p.is_active).map(p=>`<option value="${p.id}">${esc(p.name)}(${esc(p.unit)})</option>`).join("")}
             </select>
-          </div>
-          <div class="row" style="margin-bottom:6px">
-            <span class="utag cup">杯</span><span>每買</span>
-            <input type="number" id="gcup" value="${curStore?.gift_cup_threshold ?? ""}" ${locked?"readonly":""} placeholder="—" style="width:66px;text-align:center;font-size:17px"/>
-            <span>送 1 ·</span>
-            <span class="dim">贈品限定</span>
-            <select id="gcupp" ${locked?"disabled":""} style="min-width:130px;font-size:16px">
-              <option value="">不限(店家自選)</option>
-              ${products.filter(p=>p.is_active&&(p.unit||"").includes("杯")).map(p=>
-                `<option value="${p.id}" ${curStore?.gift_cup_product_id===p.id?"selected":""}>${esc(p.name)}</option>`).join("")}
+            <span>滿</span>
+            <input type="number" id="gr_qty" min="1" placeholder="10" style="width:70px;text-align:center;font-size:17px"/>
+            <span>送</span>
+            <select id="gr_gift" style="min-width:140px;font-size:16px">
+              ${products.filter(p=>p.is_active).map(p=>`<option value="${p.id}">${esc(p.name)}(${esc(p.unit)})</option>`).join("")}
             </select>
-          </div>
-          <div class="row" style="margin-bottom:0">
-            ${locked?'<span class="dim" style="font-size:14px">🔒 解鎖後可修改</span>':`<button class="btn" onclick="saveGift()">儲存搭贈設定</button>`}
-          </div>
+            <span>1</span>
+            <button class="btn" onclick="addGiftRule()">新增規則</button>
+          </div>`}
         </div>`:""}
         <div class="card"><table>
           <tr><th>商品</th><th style="text-align:right">基礎價</th><th style="text-align:right">此店價格(留空=用基礎價)</th><th></th></tr>
@@ -612,19 +616,20 @@ window.deleteProduct = async (id,name)=>{
   if (!confirm(`確定要永久刪除商品「${name}」?此動作無法復原`)) return;
   try{ await api("delete_product",{body:{id}}); loadTab(); }catch(e){alert(e.message)}
 };
-window.saveGift = async ()=>{
-  const bag = document.getElementById("gbag").value.trim();
-  const cup = document.getElementById("gcup").value.trim();
-  const bagP = document.getElementById("gbagp").value;
-  const cupP = document.getElementById("gcupp").value;
+window.addGiftRule = async ()=>{
+  const buyProductId = document.getElementById("gr_buy").value;
+  const buyQty = document.getElementById("gr_qty").value.trim();
+  const giftProductId = document.getElementById("gr_gift").value;
+  if (!buyQty || Number(buyQty)<=0) return alert("請填寫數量");
   try {
-    await api("update_store",{body:{id:selStore,
-      gift_bag_threshold: bag===""?null:Number(bag),
-      gift_cup_threshold: cup===""?null:Number(cup),
-      gift_bag_product_id: bagP||null,
-      gift_cup_product_id: cupP||null}});
+    await api("add_gift_rule",{body:{storeId:selStore,buyProductId,buyQty,giftProductId}});
     loadTab();
-  } catch(e){ alert("儲存失敗:"+e.message); }
+  } catch(e){ alert("新增失敗:"+e.message); }
+};
+window.delGiftRule = async (id)=>{
+  if (!confirm("確定刪除這條搭贈規則?")) return;
+  try { await api("delete_gift_rule",{body:{id}}); loadTab(); }
+  catch(e){ alert("刪除失敗:"+e.message); }
 };
 window.saveCP = async (pid)=>{
   const v = document.getElementById("cp_"+pid).value.trim();
