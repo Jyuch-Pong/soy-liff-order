@@ -321,16 +321,30 @@ async function loadTab(){
         ${selStore?`<div class="card">
           <b>🎁 搭贈設定</b>
           <div class="dim" style="font-size:14px;margin:4px 0 8px">填數字啟用(如填10=每買10袋送1);留空=此店無搭贈。下單時湊滿數量會提示選贈品品項。</div>
+          <div class="row" style="margin-bottom:6px">
+            <span class="utag bag">袋</span><span>每買</span>
+            <input type="number" id="gbag" value="${curStore?.gift_bag_threshold ?? ""}" ${locked?"readonly":""} placeholder="—" style="width:66px;text-align:center;font-size:17px"/>
+            <span>送 1 ·</span>
+            <span class="dim">贈品限定</span>
+            <select id="gbagp" ${locked?"disabled":""} style="min-width:130px;font-size:16px">
+              <option value="">不限(店家自選)</option>
+              ${products.filter(p=>p.is_active&&(p.unit||"").includes("袋")).map(p=>
+                `<option value="${p.id}" ${curStore?.gift_bag_product_id===p.id?"selected":""}>${esc(p.name)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="row" style="margin-bottom:6px">
+            <span class="utag cup">杯</span><span>每買</span>
+            <input type="number" id="gcup" value="${curStore?.gift_cup_threshold ?? ""}" ${locked?"readonly":""} placeholder="—" style="width:66px;text-align:center;font-size:17px"/>
+            <span>送 1 ·</span>
+            <span class="dim">贈品限定</span>
+            <select id="gcupp" ${locked?"disabled":""} style="min-width:130px;font-size:16px">
+              <option value="">不限(店家自選)</option>
+              ${products.filter(p=>p.is_active&&(p.unit||"").includes("杯")).map(p=>
+                `<option value="${p.id}" ${curStore?.gift_cup_product_id===p.id?"selected":""}>${esc(p.name)}</option>`).join("")}
+            </select>
+          </div>
           <div class="row" style="margin-bottom:0">
-            <span class="utag bag">袋</span>
-            <span>每買</span>
-            <input type="number" id="gbag" value="${curStore?.gift_bag_threshold ?? ""}" ${locked?"readonly":""} placeholder="—" style="width:70px;text-align:center;font-size:17px"/>
-            <span>送 1</span>
-            <span style="margin-left:16px" class="utag cup">杯</span>
-            <span>每買</span>
-            <input type="number" id="gcup" value="${curStore?.gift_cup_threshold ?? ""}" ${locked?"readonly":""} placeholder="—" style="width:70px;text-align:center;font-size:17px"/>
-            <span>送 1</span>
-            ${locked?'<span class="dim" style="font-size:14px">🔒 解鎖後可修改</span>':`<button class="btn" onclick="saveGift()">儲存</button>`}
+            ${locked?'<span class="dim" style="font-size:14px">🔒 解鎖後可修改</span>':`<button class="btn" onclick="saveGift()">儲存搭贈設定</button>`}
           </div>
         </div>`:""}
         <div class="card"><table>
@@ -601,10 +615,14 @@ window.deleteProduct = async (id,name)=>{
 window.saveGift = async ()=>{
   const bag = document.getElementById("gbag").value.trim();
   const cup = document.getElementById("gcup").value.trim();
+  const bagP = document.getElementById("gbagp").value;
+  const cupP = document.getElementById("gcupp").value;
   try {
     await api("update_store",{body:{id:selStore,
       gift_bag_threshold: bag===""?null:Number(bag),
-      gift_cup_threshold: cup===""?null:Number(cup)}});
+      gift_cup_threshold: cup===""?null:Number(cup),
+      gift_bag_product_id: bagP||null,
+      gift_cup_product_id: cupP||null}});
     loadTab();
   } catch(e){ alert("儲存失敗:"+e.message); }
 };
