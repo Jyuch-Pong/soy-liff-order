@@ -108,6 +108,7 @@ let viewOrders = false; // true=歷史訂單查詢模式
 let history = null;
 let giftCart = {};  // productId -> 贈品數量
 let deliveryWeekdays = null; // 該店固定配送星期,如[1,4]
+let giftRules = [];          // 搭贈規則:買X滿N送Y
 
 const app = document.getElementById("app");
 
@@ -127,27 +128,20 @@ function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 }
 
-// 依單位加總,算出可得贈品數
+// 依搭贈規則計算各品項可得贈品數
 function giftInfo() {
-  let bagQty = 0, cupQty = 0;
-  for (const p of products) {
-    const q = cart[p.id] || 0;
-    if (!q) continue;
-    if ((p.unit||"").includes("袋")) bagQty += q;
-    else if ((p.unit||"").includes("杯")) cupQty += q;
+  const allow = {};   // productId -> 可得數量
+  for (const r of giftRules) {
+    const bought = cart[r.buyProductId] || 0;
+    if (!r.buyQty || r.buyQty <= 0) continue;
+    const n = Math.floor(bought / r.buyQty);
+    if (n > 0) allow[r.giftProductId] = (allow[r.giftProductId] || 0) + n;
   }
-  const bagTh = store.giftBag, cupTh = store.giftCup;
-  const bagGift = (bagTh && bagTh > 0) ? Math.floor(bagQty / bagTh) : 0;
-  const cupGift = (cupTh && cupTh > 0) ? Math.floor(cupQty / cupTh) : 0;
-  // 目前已選的贈品數(依類別)
-  let selBag = 0, selCup = 0;
-  for (const p of products) {
-    const g = giftCart[p.id] || 0;
-    if (!g) continue;
-    if ((p.unit||"").includes("袋")) selBag += g;
-    else if ((p.unit||"").includes("杯")) selCup += g;
-  }
-  return { bagQty, cupQty, bagTh, cupTh, bagGift, cupGift, selBag, selCup };
+  const selected = {};
+  for (const [pid, q] of Object.entries(giftCart)) if (q > 0) selected[pid] = q;
+  const totalAllow = Object.values(allow).reduce((s, n) => s + n, 0);
+  const totalSel = Object.values(selected).reduce((s, n) => s + n, 0);
+  return { allow, selected, totalAllow, totalSel };
 }
 
 function cartTotal() {
@@ -233,36 +227,28 @@ function render() {
     </div>
     ${(()=>{
       const g = giftInfo();
-      if (!g.bagGift && !g.cupGift) return "";
-      const rows = [];
-      if (g.bagGift) rows.push({cls:"袋", label:"袋裝", got:g.bagGift, sel:g.selBag});
-      if (g.cupGift) rows.push({cls:"杯", label:"杯裝", got:g.cupGift, sel:g.selCup});
+      if (!g.totalAllow) return "";
+      const pname = (id)=>{ const p = products.find(x=>x.id===id); return p ? p.name : "?"; };
+      const punit = (id)=>{ const p = products.find(x=>x.id===id); return p ? p.unit : ""; };
       return `<div class="section" style="padding-bottom:0">
         <div style="background:rgba(59,130,246,.10);border:1px solid #3b82f6;border-radius:12px;padding:12px 14px">
           <b style="color:#7eb3ff">🎁 搭贈</b>
-          ${rows.map(r=>`
-            <div style="margin-top:8px;font-size:16px">
-              ${r.label}滿 ${r.cls==="袋"?g.bagTh:g.cupTh} 可送 <b style="color:#7eb3ff">${r.got}</b> ${r.cls}
-              ${(r.cls==="袋"?store.giftBagProductId:store.giftCupProductId)?'<span style="font-size:14px;color:var(--text3)">(指定品項)</span>':""}
-              ${r.sel<r.got?`<span style="color:var(--amber);font-size:15px">(還可選 ${r.got-r.sel} ${r.cls})</span>`
-                          :`<span style="color:var(--green);font-size:15px">✓ 已選滿</span>`}
+          ${Object.entries(g.allow).map(([pid, n])=>{
+            const sel = g.selected[pid] || 0;
+            return `
+            <div style="margin-top:10px;font-size:16px">
+              可送 <b style="color:#7eb3ff">${esc(pname(pid))}</b> ${n} ${esc(punit(pid))}
+              ${sel<n?`<span style="color:var(--amber);font-size:15px">(還可拿 ${n-sel})</span>`
+                     :`<span style="color:var(--green);font-size:15px">✓ 已選滿</span>`}
             </div>
-            <div style="margin-top:6px">
-              ${products.filter(p=>{
-                if (!(p.unit||"").includes(r.cls)) return false;
-                const lim = r.cls==="袋" ? store.giftBagProductId : store.giftCupProductId;
-                return !lim || p.id === lim;   // 有指定贈品品項時只顯示該品項
-              }).map(p=>{
-                const gq = giftCart[p.id]||0;
-                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0">
-                  <span style="font-size:16px">${esc(p.name)}</span>
-                  <span style="display:flex;align-items:center;gap:8px">
-                    <button onclick="chgGift('${p.id}',-1,'${r.cls}')" style="width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:18px">−</button>
-                    <span style="min-width:24px;text-align:center;font-family:monospace;font-size:18px;color:${gq?'#7eb3ff':'var(--text3)'}">${gq}</span>
-                    <button onclick="chgGift('${p.id}',1,'${r.cls}')" style="width:34px;height:34px;border-radius:50%;border:1px solid #3b82f6;background:rgba(59,130,246,.2);color:#7eb3ff;font-size:18px">＋</button>
-                  </span>
-                </div>`}).join("")}
-            </div>`).join("")}
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0">
+              <span style="font-size:16px">${esc(pname(pid))} <span style="color:var(--text3);font-size:14px">${esc(punit(pid))}</span></span>
+              <span style="display:flex;align-items:center;gap:8px">
+                <button onclick="chgGift('${pid}',-1)" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:18px">−</button>
+                <span style="min-width:26px;text-align:center;font-family:monospace;font-size:19px;color:${sel?'#7eb3ff':'var(--text3)'}">${sel}</span>
+                <button onclick="chgGift('${pid}',1)" style="width:36px;height:36px;border-radius:50%;border:1px solid #3b82f6;background:rgba(59,130,246,.2);color:#7eb3ff;font-size:18px">＋</button>
+              </span>
+            </div>`}).join("")}
         </div>
       </div>`;
     })()}
@@ -299,12 +285,11 @@ window.chg = function (pid, d) {
   render();
 };
 
-window.chgGift = function (pid, d, cls) {
+window.chgGift = function (pid, d) {
   const g = giftInfo();
-  const max = cls === "袋" ? g.bagGift : g.cupGift;
-  const sel = cls === "袋" ? g.selBag : g.selCup;
+  const max = g.allow[pid] || 0;
   const cur = giftCart[pid] || 0;
-  if (d > 0 && sel >= max) { alert(`${cls}裝贈品最多 ${max} ${cls}`); return; }
+  if (d > 0 && cur >= max) { alert(`此品項最多可拿 ${max} 個`); return; }
   giftCart[pid] = Math.max(0, cur + d);
   if (!giftCart[pid]) delete giftCart[pid];
   render();
@@ -328,19 +313,15 @@ window.submitOrder = async function () {
   for (const [productId, quantity] of Object.entries(giftCart)) {
     if (quantity > 0) items.push({ productId, quantity, isGift: true });
   }
-  // 提醒但不強制:湊滿卻沒選滿贈品
+  // 提醒但不強制:可拿贈品卻沒拿滿
   const gi = giftInfo();
-  if ((gi.bagGift > gi.selBag) || (gi.cupGift > gi.selCup)) {
-    const parts = [];
-    if (gi.bagGift > gi.selBag) parts.push(`袋裝還可選 ${gi.bagGift - gi.selBag} 袋`);
-    if (gi.cupGift > gi.selCup) parts.push(`杯裝還可選 ${gi.cupGift - gi.selCup} 杯`);
-    if (!confirm(`您有贈品尚未選擇(${parts.join("、")}),確定直接送出?`)) {
+  if (gi.totalAllow > gi.totalSel) {
+    if (!confirm(`您還有 ${gi.totalAllow - gi.totalSel} 個贈品未選,確定直接送出?`)) {
       btn.disabled = false;
       btn.textContent = "送出訂單";
       return;
     }
   }
-
   submitting = true;
   try {
     const res = await fetch(API_URL, {
@@ -403,6 +384,7 @@ window.submitOrder = async function () {
 
     store = data.store;
     deliveryWeekdays = data.deliveryWeekdays || null;
+    giftRules = data.giftRules || [];
     if (viewOrders) {
       history = data.history;
       renderHistory();
