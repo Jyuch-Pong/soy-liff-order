@@ -503,7 +503,7 @@ function renderBuilder(s){
           <span style="font-size:16px"><span class="utag ${ucls}">${esc(p.unit)}</span>${esc(p.name)}
             ${builder.isTemp
               ? `<input type="number" min="0" value="${builder.customPrice[p.id] ?? p.price}"
-                   onchange="setCustomPrice('${p.id}',this.value)" onfocus="this.select()"
+                   oninput="setCustomPrice('${p.id}',this.value)" onfocus="this.select()"
                    style="width:64px;text-align:right;font-size:15px;margin-left:4px;
                           border-color:var(--amber);color:var(--amber)"/>`
               : `<span class="dim" style="font-size:14px">$${p.price}</span>`}
@@ -538,7 +538,7 @@ function renderBuilder(s){
       })()}
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--border);margin-top:6px">
         <span class="dim">合計</span>
-        <b style="font-size:18px">$${builder.priceList.reduce((s,p)=>s+(builder.cart[p.id]||0)*(builder.isTemp?(builder.customPrice[p.id] ?? p.price):p.price),0).toLocaleString()}</b>
+        <b id="bTotal" style="font-size:18px">$${builderTotal().toLocaleString()}</b>
       </div>
       <div class="rowbtns">
         <button class="btn2" onclick="closeBuilder()">取消</button>
@@ -569,6 +569,24 @@ function bGiftInfo(){
   const totalSel = Object.values(selected).reduce((s,n)=>s+n,0);
   return { allow, selected, totalAllow, totalSel };
 }
+function builderTotal(){
+  if (!builder) return 0;
+  return builder.priceList.reduce((s,p)=>{
+    const q = builder.cart[p.id]||0;
+    const price = builder.isTemp ? (builder.customPrice[p.id] ?? p.price) : p.price;
+    return s + q*price;
+  }, 0);
+}
+// 邊打邊更新合計:只改數字、不重繪,避免輸入時游標跳掉
+window.setCustomPrice = (pid,val)=>{
+  const n = Number(val);
+  if (val === "" || !Number.isFinite(n) || n < 0) delete builder.customPrice[pid];
+  else builder.customPrice[pid] = n;
+  const el = document.getElementById("bTotal");
+  if (el) el.textContent = "$" + builderTotal().toLocaleString();
+};
+window.setBuilderDate = (val)=>{ if(builder) builder.date = val; render(); };
+
 window.chgBGift = (pid,d)=>{
   const g = bGiftInfo();
   const max = g.allow[pid] || 0;
