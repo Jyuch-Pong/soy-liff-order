@@ -556,6 +556,24 @@ async function loadPrices(storeId){
     return Array.isArray(r) ? { products:r, giftRules:[], isTemp:false } : r;
   } catch(e){ alert("載入價格失敗:"+e.message); return null; }
 }
+function builderTotal(){
+  if (!builder) return 0;
+  return builder.priceList.reduce((s,p)=>{
+    const q = builder.cart[p.id]||0;
+    const price = builder.isTemp ? (builder.customPrice[p.id] ?? p.price) : p.price;
+    return s + q*price;
+  }, 0);
+}
+// 邊打邊更新合計:只改數字、不重繪,避免輸入時游標跳掉
+window.setCustomPrice = (pid,val)=>{
+  const n = Number(val);
+  if (val === "" || !Number.isFinite(n) || n < 0) delete builder.customPrice[pid];
+  else builder.customPrice[pid] = n;
+  const el = document.getElementById("bTotal");
+  if (el) el.textContent = "$" + builderTotal().toLocaleString();
+};
+window.setBuilderDate = (val)=>{ if(builder) builder.date = val; render(); };
+
 function bGiftInfo(){
   const unitQty = {};
   for (const p of builder.priceList) {
