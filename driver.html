@@ -556,10 +556,21 @@ async function loadPrices(storeId){
   } catch(e){ alert("載入價格失敗:"+e.message); return null; }
 }
 function bGiftInfo(){
+  // 依單位加總(供 buyScope='unit' 的規則使用)
+  const unitQty = {};
+  for (const p of builder.priceList) {
+    const q = builder.cart[p.id] || 0;
+    if (!q) continue;
+    const u = p.unit || "";
+    if (u.includes("袋")) unitQty["袋"] = (unitQty["袋"]||0) + q;
+    else if (u.includes("杯")) unitQty["杯"] = (unitQty["杯"]||0) + q;
+  }
   const allow = {};
   for (const r of (builder.giftRules||[])) {
-    const bought = builder.cart[r.buyProductId] || 0;
     if (!r.buyQty || r.buyQty <= 0) continue;
+    const bought = (r.buyScope === "unit")
+      ? (unitQty[r.buyUnit] || 0)
+      : (builder.cart[r.buyProductId] || 0);
     const n = Math.floor(bought / r.buyQty);
     if (n > 0) allow[r.giftProductId] = (allow[r.giftProductId]||0) + n;
   }
