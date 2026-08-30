@@ -328,8 +328,11 @@ async function loadTab(){
             ${giftRules.map(r=>{
               const bp = products.find(p=>p.id===r.buy_product_id);
               const gp = products.find(p=>p.id===r.gift_product_id);
+              const buyLabel = (r.buy_scope==="unit")
+                ? `<span class="utag ${r.buy_unit==="袋"?"bag":"cup"}">${esc(r.buy_unit)}</span><b>所有${esc(r.buy_unit)}裝合計</b>`
+                : (bp?`<span class="utag ${(bp.unit||"").includes("袋")?"bag":(bp.unit||"").includes("杯")?"cup":"other"}">${esc(bp.unit)}</span>${esc(bp.name)}`:"(已刪除商品)");
               return `<tr>
-                <td>${bp?`<span class="utag ${(bp.unit||"").includes("袋")?"bag":(bp.unit||"").includes("杯")?"cup":"other"}">${esc(bp.unit)}</span>${esc(bp.name)}`:"(已刪除商品)"}</td>
+                <td>${buyLabel}</td>
                 <td style="text-align:center" class="mono"><b>${r.buy_qty}</b></td>
                 <td>${gp?`<span class="utag ${(gp.unit||"").includes("袋")?"bag":(gp.unit||"").includes("杯")?"cup":"other"}">${esc(gp.unit)}</span>${esc(gp.name)}`:"(已刪除商品)"}</td>
                 <td style="text-align:right">${locked?"":`<button class="danger" onclick="delGiftRule('${r.id}')">刪除</button>`}</td>
@@ -338,7 +341,9 @@ async function loadTab(){
           ${locked?'<div class="dim" style="font-size:14px">🔒 解鎖後可新增規則</div>':`
           <div class="row" style="margin-bottom:0;align-items:center">
             <span>買</span>
-            <select id="gr_buy" style="min-width:140px;font-size:16px">
+            <select id="gr_buy" style="min-width:160px;font-size:16px">
+              <option value="unit:袋">📦 所有袋裝合計</option>
+              <option value="unit:杯">📦 所有杯裝合計</option>
               ${products.filter(p=>p.is_active).map(p=>`<option value="${p.id}">${esc(p.name)}(${esc(p.unit)})</option>`).join("")}
             </select>
             <span>滿</span>
@@ -617,12 +622,15 @@ window.deleteProduct = async (id,name)=>{
   try{ await api("delete_product",{body:{id}}); loadTab(); }catch(e){alert(e.message)}
 };
 window.addGiftRule = async ()=>{
-  const buyProductId = document.getElementById("gr_buy").value;
+  const buyVal = document.getElementById("gr_buy").value;
   const buyQty = document.getElementById("gr_qty").value.trim();
   const giftProductId = document.getElementById("gr_gift").value;
   if (!buyQty || Number(buyQty)<=0) return alert("請填寫數量");
+  const body = { storeId:selStore, buyQty, giftProductId };
+  if (buyVal.startsWith("unit:")) { body.buyScope="unit"; body.buyUnit=buyVal.slice(5); }
+  else { body.buyScope="product"; body.buyProductId=buyVal; }
   try {
-    await api("add_gift_rule",{body:{storeId:selStore,buyProductId,buyQty,giftProductId}});
+    await api("add_gift_rule",{body});
     loadTab();
   } catch(e){ alert("新增失敗:"+e.message); }
 };
