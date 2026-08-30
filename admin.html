@@ -322,7 +322,8 @@ async function loadTab(){
         </div>
         ${selStore?`<div class="card">
           <b>🎁 搭贈規則</b>
-          <div class="dim" style="font-size:14px;margin:4px 0 8px">買指定品項滿N個,送指定品項1個。可設多條規則;留空=此店無搭贈。</div>
+          <div class="dim" style="font-size:14px;margin:4px 0 8px">買指定品項(或所有袋/杯裝合計)滿N個,送指定品項1個。<br/>
+          ※ 購買條件相同的多條規則會<b>共用同一份贈品額度</b>——例如設「所有袋裝滿8送香醇」＋「所有袋裝滿8送無糖」,客人訂24袋時共可送3個,由客人自選香醇或無糖。</div>
           ${giftRules.length?`<table style="margin-bottom:10px">
             <tr><th>買</th><th style="text-align:center">滿</th><th>送 1</th><th></th></tr>
             ${giftRules.map(r=>{
