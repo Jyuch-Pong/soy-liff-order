@@ -139,20 +139,31 @@ function giftInfo() {
     if (u.includes("袋")) unitQty["袋"] = (unitQty["袋"] || 0) + q;
     else if (u.includes("杯")) unitQty["杯"] = (unitQty["杯"] || 0) + q;
   }
-  const allow = {};   // productId -> 可得數量
+  // 相同購買條件的規則共用一份額度,贈品可在該組指定的品項中自由分配
+  const groups = {};
   for (const r of giftRules) {
     if (!r.buyQty || r.buyQty <= 0) continue;
+    const key = r.buyScope === "unit"
+      ? `unit|${r.buyUnit}|${r.buyQty}`
+      : `product|${r.buyProductId}|${r.buyQty}`;
     const bought = (r.buyScope === "unit")
       ? (unitQty[r.buyUnit] || 0)
       : (cart[r.buyProductId] || 0);
     const n = Math.floor(bought / r.buyQty);
-    if (n > 0) allow[r.giftProductId] = (allow[r.giftProductId] || 0) + n;
+    if (!groups[key]) groups[key] = { allow: 0, giftIds: [], label: "" };
+    groups[key].allow = n;                       // 同條件只算一次
+    if (!groups[key].giftIds.includes(r.giftProductId)) groups[key].giftIds.push(r.giftProductId);
+    groups[key].label = r.buyScope === "unit"
+      ? `所有${r.buyUnit}裝滿 ${r.buyQty}`
+      : `${(products.find(p=>p.id===r.buyProductId)||{}).name || "?"} 滿 ${r.buyQty}`;
   }
-  const selected = {};
-  for (const [pid, q] of Object.entries(giftCart)) if (q > 0) selected[pid] = q;
-  const totalAllow = Object.values(allow).reduce((s, n) => s + n, 0);
-  const totalSel = Object.values(selected).reduce((s, n) => s + n, 0);
-  return { allow, selected, totalAllow, totalSel };
+  const pools = Object.values(groups).filter(g => g.allow > 0).map(g => {
+    const sel = g.giftIds.reduce((s, id) => s + (giftCart[id] || 0), 0);
+    return { ...g, selected: sel };
+  });
+  const totalAllow = pools.reduce((s, g) => s + g.allow, 0);
+  const totalSel = pools.reduce((s, g) => s + g.selected, 0);
+  return { pools, totalAllow, totalSel };
 }
 
 function cartTotal() {
@@ -244,22 +255,22 @@ function render() {
       return `<div class="section" style="padding-bottom:0">
         <div style="background:rgba(59,130,246,.10);border:1px solid #3b82f6;border-radius:12px;padding:12px 14px">
           <b style="color:#7eb3ff">🎁 搭贈</b>
-          ${Object.entries(g.allow).map(([pid, n])=>{
-            const sel = g.selected[pid] || 0;
-            return `
+          ${g.pools.map((pool,gi)=>`
             <div style="margin-top:10px;font-size:16px">
-              可送 <b style="color:#7eb3ff">${esc(pname(pid))}</b> ${n} ${esc(punit(pid))}
-              ${sel<n?`<span style="color:var(--amber);font-size:15px">(還可拿 ${n-sel})</span>`
-                     :`<span style="color:var(--green);font-size:15px">✓ 已選滿</span>`}
+              ${esc(pool.label)} → 可送 <b style="color:#7eb3ff">${pool.allow}</b> 個
+              ${pool.selected<pool.allow?`<span style="color:var(--amber);font-size:15px">(還可拿 ${pool.allow-pool.selected})</span>`
+                                        :`<span style="color:var(--green);font-size:15px">✓ 已選滿</span>`}
             </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0">
-              <span style="font-size:16px">${esc(pname(pid))} <span style="color:var(--text3);font-size:14px">${esc(punit(pid))}</span></span>
-              <span style="display:flex;align-items:center;gap:8px">
-                <button onclick="chgGift('${pid}',-1)" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:18px">−</button>
-                <span style="min-width:26px;text-align:center;font-family:monospace;font-size:19px;color:${sel?'#7eb3ff':'var(--text3)'}">${sel}</span>
-                <button onclick="chgGift('${pid}',1)" style="width:36px;height:36px;border-radius:50%;border:1px solid #3b82f6;background:rgba(59,130,246,.2);color:#7eb3ff;font-size:18px">＋</button>
-              </span>
-            </div>`}).join("")}
+            ${pool.giftIds.map(pid=>{
+              const sel = giftCart[pid] || 0;
+              return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0">
+                <span style="font-size:16px">${esc(pname(pid))} <span style="color:var(--text3);font-size:14px">${esc(punit(pid))}</span></span>
+                <span style="display:flex;align-items:center;gap:8px">
+                  <button onclick="chgGift('${pid}',-1,${gi})" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:18px">−</button>
+                  <span style="min-width:26px;text-align:center;font-family:monospace;font-size:19px;color:${sel?'#7eb3ff':'var(--text3)'}">${sel}</span>
+                  <button onclick="chgGift('${pid}',1,${gi})" style="width:36px;height:36px;border-radius:50%;border:1px solid #3b82f6;background:rgba(59,130,246,.2);color:#7eb3ff;font-size:18px">＋</button>
+                </span>
+              </div>`}).join("")}`).join("")}
         </div>
       </div>`;
     })()}
@@ -296,11 +307,15 @@ window.chg = function (pid, d) {
   render();
 };
 
-window.chgGift = function (pid, d) {
+window.chgGift = function (pid, d, gi) {
   const g = giftInfo();
-  const max = g.allow[pid] || 0;
+  const pool = g.pools[gi];
+  if (!pool) return;
   const cur = giftCart[pid] || 0;
-  if (d > 0 && cur >= max) { alert(`此品項最多可拿 ${max} 個`); return; }
+  if (d > 0 && pool.selected >= pool.allow) {
+    alert(`此組贈品最多 ${pool.allow} 個`);
+    return;
+  }
   giftCart[pid] = Math.max(0, cur + d);
   if (!giftCart[pid]) delete giftCart[pid];
   render();
