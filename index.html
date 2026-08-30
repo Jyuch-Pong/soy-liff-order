@@ -130,10 +130,21 @@ function esc(s) {
 
 // 依搭贈規則計算各品項可得贈品數
 function giftInfo() {
+  // 依單位加總購買量(供 buyScope='unit' 的規則使用)
+  const unitQty = {};
+  for (const p of products) {
+    const q = cart[p.id] || 0;
+    if (!q) continue;
+    const u = p.unit || "";
+    if (u.includes("袋")) unitQty["袋"] = (unitQty["袋"] || 0) + q;
+    else if (u.includes("杯")) unitQty["杯"] = (unitQty["杯"] || 0) + q;
+  }
   const allow = {};   // productId -> 可得數量
   for (const r of giftRules) {
-    const bought = cart[r.buyProductId] || 0;
     if (!r.buyQty || r.buyQty <= 0) continue;
+    const bought = (r.buyScope === "unit")
+      ? (unitQty[r.buyUnit] || 0)
+      : (cart[r.buyProductId] || 0);
     const n = Math.floor(bought / r.buyQty);
     if (n > 0) allow[r.giftProductId] = (allow[r.giftProductId] || 0) + n;
   }
